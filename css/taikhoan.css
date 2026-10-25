@@ -1,0 +1,22 @@
+* {
+    box-sizing: border-box;
+}
+body {
+    display: grid;
+    justify-content: center;
+    gap: 10px;
+}
+.form-row {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+.gender-options {
+    display: flex;
+    gap: 20px;
+}
+.form-button{
+    display: flex;
+    justify-content: flex-end;
+    margin-top: 20px;
+}
