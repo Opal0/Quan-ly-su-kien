@@ -5,9 +5,12 @@
     <link rel="shortcut icon" href="favicon.ico" type="image/x-icon">
     <link rel="stylesheet" href="../css/dungchung.css">
     <link rel="stylesheet" href="../css/taikhoan.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css">
     <title>Tài khoản</title>
 </head>
 <body>
+    <?php include 'top.html'; ?>
+    <?php include 'header.html'; ?>
     <main class="main-content">
         <h2>Thông tin tài khoản</h2>
         <form action="">
@@ -43,5 +46,6 @@
             </div>
             </form>
     </main>
+    <?php include 'footer.html'; ?>
 </body>
 </html>

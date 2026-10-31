@@ -1,10 +1,5 @@
-* {
+/* * {
     box-sizing: border-box;
-}
-body {
-    display: grid;
-    justify-content: center;
-    gap: 10px;
 }
 .form-row {
     display: flex;
@@ -19,4 +14,4 @@ body {
     display: flex;
     justify-content: flex-end;
     margin-top: 20px;
-}
+} */
