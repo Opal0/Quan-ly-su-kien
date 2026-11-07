@@ -1,397 +1,119 @@
-
-/* =========================
-   TRANG MUA VÉ MUSICFORLIFE
-========================= */
-
+/* GIAO DIEN TRANG MUA VE - MUSIC FOR LIFE */
 .ticket-main {
-    background: #f5f8fb;
-    padding: 40px 5%;
+    flex: 1;
+    width: 100%;
     min-height: 650px;
+    padding: 48px 5% 65px;
+    background: #f3f7fb;
 }
-
-/* TOP */
-
-.ticket-top {
-    background: rgb(76, 142, 183);
-    color: white;
-    padding: 10px 5%;
-    display: flex;
-    justify-content: space-between;
-    font-size: 13px;
+.ticket-title { text-align: center; margin: 0 auto 34px; }
+.ticket-eyebrow {
+    display: inline-block; color: #4c8eb7; font-size: 12px;
+    font-weight: 800; letter-spacing: 2px; margin-bottom: 10px;
 }
-
-.ticket-top a {
-    color: white;
-    text-decoration: none;
-}
-
-.ticket-top span {
-    margin: 0 10px;
-}
-
-/* HEADER */
-
-.ticket-header {
-    background: white;
-    min-height: 85px;
-    padding: 10px 5%;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    box-shadow: 0 2px 6px rgba(0,0,0,0.08);
-}
-
-.ticket-logo {
-    font-size: 27px;
-    font-weight: bold;
-    color: rgb(76, 142, 183);
-    text-decoration: none;
-}
-
-.ticket-logo span {
-    color: #e99b42;
-}
-
-.ticket-nav {
-    display: flex;
-    align-items: center;
-    gap: 35px;
-}
-
-.ticket-nav a {
-    text-decoration: none;
-    color: #34495e;
-    font-weight: bold;
-    font-size: 15px;
-    transition: 0.3s;
-}
-
-.ticket-nav a:hover,
-.ticket-nav a.active {
-    color: rgb(76, 142, 183);
-}
-
-/* TIÊU ĐỀ */
-
-.ticket-title {
-    text-align: center;
-    margin-bottom: 35px;
-}
-
-.ticket-title h1 {
-    color: rgb(55, 119, 160);
-    font-size: 30px;
-    margin-bottom: 12px;
-}
-
-.ticket-title p {
-    color: #777;
-    font-size: 15px;
-}
-
-/* BỐ CỤC */
-
+.ticket-title h1 { color: #20394d; font-size: 34px; margin: 0 0 10px; }
+.ticket-title p { color: #71808c; font-size: 15px; margin: 0; }
 .ticket-layout {
-    max-width: 1150px;
-    margin: auto;
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 30px;
-    align-items: start;
+    max-width: 1160px; margin: auto; display: grid;
+    grid-template-columns: 1fr 1fr; gap: 28px; align-items: start;
 }
-
-/* THÔNG TIN SỰ KIỆN */
-
-.event-card,
-.booking-card {
-    background: white;
-    border-radius: 12px;
-    overflow: hidden;
-    box-shadow: 0 3px 12px rgba(0,0,0,0.07);
+.event-card, .booking-card {
+    background: #fff; border-radius: 16px; overflow: hidden;
+    box-shadow: 0 8px 28px rgba(31, 65, 88, .08);
+    border: 1px solid #e8eef3;
 }
-
 .event-cover {
-    height: 230px;
-    background: linear-gradient(
-        135deg,
-        rgb(76, 142, 183),
-        rgb(36, 85, 125)
-    );
-    color: white;
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    align-items: center;
-    gap: 12px;
+    min-height: 235px; padding: 28px; color: #fff;
+    display: flex; flex-direction: column; justify-content: center;
+    align-items: center; gap: 9px; text-align: center;
+    background: radial-gradient(circle at 80% 20%, rgba(255,255,255,.2), transparent 30%),
+                linear-gradient(135deg, #4c8eb7, #234d70);
 }
-
-.event-cover i {
-    font-size: 60px;
+.cover-label {
+    font-size: 11px; letter-spacing: 2px; font-weight: 800;
+    border: 1px solid rgba(255,255,255,.55); border-radius: 30px;
+    padding: 6px 12px;
 }
-
-.event-cover h2 {
-    font-size: 24px;
-    letter-spacing: 2px;
-}
-
-.event-cover p {
-    font-size: 14px;
-}
-
-.event-content {
-    padding: 28px;
-}
-
+.event-cover i { font-size: 48px; margin-top: 7px; }
+.event-cover h2 { margin: 0; font-size: 25px; letter-spacing: 3px; }
+.event-cover p { margin: 0; font-size: 14px; opacity: .9; }
+.event-content { padding: 28px 30px 30px; }
 .event-tag {
-    display: inline-block;
-    background: #e6f2f9;
-    color: rgb(55, 119, 160);
-    padding: 7px 13px;
-    border-radius: 20px;
-    font-size: 13px;
-    margin-bottom: 18px;
+    display: inline-block; color: #397da7; background: #e9f4fa;
+    padding: 7px 13px; border-radius: 30px; font-size: 12px;
+    font-weight: 700; margin-bottom: 13px;
 }
-
-.event-content > h2 {
-    color: #263746;
-    font-size: 23px;
-    margin-bottom: 20px;
-}
-
-/* CHI TIẾT SỰ KIỆN */
-
+.event-content > h2 { color: #263d50; font-size: 23px; line-height: 1.35; margin: 0 0 12px; }
 .event-detail {
-    display: flex;
-    align-items: center;
-    gap: 15px;
-    padding: 15px 0;
-    border-bottom: 1px solid #eee;
+    display: flex; align-items: center; gap: 14px;
+    padding: 14px 0; border-bottom: 1px solid #edf1f4;
 }
-
 .event-detail > i {
-    width: 42px;
-    height: 42px;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    background: #eaf3f9;
-    color: rgb(76, 142, 183);
-    border-radius: 8px;
-    font-size: 17px;
+    width: 42px; height: 42px; flex: 0 0 42px;
+    display: grid; place-items: center; border-radius: 10px;
+    color: #4c8eb7; background: #edf6fb; font-size: 17px;
 }
-
-.event-detail div {
-    display: flex;
-    flex-direction: column;
-    gap: 5px;
+.event-detail div { display: flex; flex-direction: column; gap: 4px; }
+.event-detail span { color: #87939d; font-size: 12px; }
+.event-detail strong { color: #33495a; font-size: 14px; }
+.event-intro { margin-top: 22px; }
+.event-intro h3 { margin: 0 0 8px; color: #263d50; font-size: 17px; }
+.event-intro p { color: #73818c; font-size: 13px; line-height: 1.75; margin: 0; }
+.event-benefits { display: grid; gap: 10px; margin-top: 20px; }
+.event-benefits div { color: #536b7b; font-size: 13px; }
+.event-benefits i { color: #4c9b79; margin-right: 8px; }
+.booking-card { padding: 30px; }
+.booking-title { margin-bottom: 24px; }
+.booking-step { color: #4c8eb7; font-size: 11px; font-weight: 800; letter-spacing: 1.5px; }
+.booking-title h2 { color: #263d50; font-size: 23px; margin: 8px 0; }
+.booking-title p { color: #87939d; font-size: 13px; margin: 0; }
+.form-group { margin-bottom: 17px; }
+.form-group label { display: block; color: #344b5c; font-size: 13px; font-weight: 700; margin-bottom: 8px; }
+.form-group label span { color: #e05b5b; }
+.form-group input, .form-group select {
+    display: block; width: 100%; height: 45px; padding: 0 13px;
+    border: 1px solid #dce4ea; border-radius: 8px;
+    background: #fff; color: #344b5c; font-size: 13px; outline: none;
+    transition: .2s;
 }
-
-.event-detail span {
-    color: #888;
-    font-size: 13px;
+.form-group input:focus, .form-group select:focus {
+    border-color: #4c8eb7; box-shadow: 0 0 0 3px rgba(76,142,183,.12);
 }
-
-.event-detail strong {
-    color: #333;
-    font-size: 15px;
-}
-
-.event-intro {
-    margin-top: 25px;
-}
-
-.event-intro h3 {
-    color: #263746;
-    margin-bottom: 10px;
-}
-
-.event-intro p {
-    color: #777;
-    font-size: 14px;
-    line-height: 1.7;
-}
-
-/* FORM ĐẶT VÉ */
-
-.booking-card {
-    padding: 30px;
-}
-
-.booking-title {
-    margin-bottom: 25px;
-}
-
-.booking-title h2 {
-    font-size: 23px;
-    color: #263746;
-    margin-bottom: 10px;
-}
-
-.booking-title p {
-    font-size: 14px;
-    color: #888;
-}
-
-.form-group {
-    margin-bottom: 20px;
-}
-
-.form-group label {
-    display: block;
-    font-size: 14px;
-    font-weight: bold;
-    color: #333;
-    margin-bottom: 9px;
-}
-
-.form-group label span {
-    color: #e53935;
-}
-
-.form-group input,
-.form-group select {
-    width: 100%;
-    height: 46px;
-    padding: 0 13px;
-    border: 1px solid #d8dfe5;
-    border-radius: 7px;
-    font-size: 14px;
-    outline: none;
-    background: white;
-}
-
-.form-group input:focus,
-.form-group select:focus {
-    border-color: rgb(76, 142, 183);
-    box-shadow: 0 0 0 3px rgba(76,142,183,0.12);
-}
-
-/* PHÂN CÁCH */
-
-.form-divider {
-    border-top: 1px solid #eee;
-    padding-top: 20px;
-    margin-top: 25px;
-    margin-bottom: 20px;
-}
-
-.form-divider h3 {
-    font-size: 17px;
-    color: #263746;
-}
-
-/* TỔNG TIỀN */
-
+.field-hint { display: block; color: #929da6; font-size: 11px; margin-top: 6px; }
+.form-divider { border-top: 1px solid #edf1f4; padding-top: 19px; margin: 22px 0 18px; }
+.form-divider h3 { color: #344b5c; font-size: 15px; margin: 0; }
+.form-divider i { color: #4c8eb7; margin-right: 7px; }
 .ticket-total {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    border-top: 1px solid #eee;
-    padding: 20px 0;
-    margin-top: 10px;
+    display: flex; justify-content: space-between; align-items: center;
+    gap: 12px; border-top: 1px dashed #d9e2e9; padding: 20px 0;
+    margin-top: 6px;
 }
-
-.ticket-total span {
-    font-weight: bold;
-    color: #333;
-}
-
-.ticket-total strong {
-    font-size: 21px;
-    color: #e53935;
-}
-
-/* GHI CHÚ */
-
+.ticket-total div { display: flex; flex-direction: column; gap: 5px; }
+.ticket-total span { color: #344b5c; font-size: 13px; font-weight: 700; }
+.ticket-total small { color: #929da6; font-size: 11px; }
+.ticket-total strong { color: #e16b45; font-size: 22px; white-space: nowrap; }
 .ticket-note {
-    display: flex;
-    gap: 10px;
-    padding: 14px;
-    background: #eef6fb;
-    border-radius: 8px;
-    margin-bottom: 22px;
+    display: flex; gap: 10px; padding: 13px;
+    background: #eff7fb; border-radius: 9px; margin-bottom: 18px;
 }
-
-.ticket-note i {
-    color: rgb(76, 142, 183);
-    margin-top: 3px;
-}
-
-.ticket-note p {
-    color: #567080;
-    font-size: 13px;
-    line-height: 1.6;
-}
-
-/* NÚT ĐĂNG KÝ */
-
+.ticket-note i { color: #4c8eb7; margin-top: 2px; }
+.ticket-note p { color: #607989; font-size: 11px; line-height: 1.6; margin: 0; }
 .btn-booking {
-    width: 100%;
-    height: 48px;
-    border: none;
-    border-radius: 7px;
-    background: rgb(76, 142, 183);
-    color: white;
-    font-size: 16px;
-    font-weight: bold;
-    cursor: pointer;
-    transition: 0.3s;
+    width: 100%; min-height: 48px; border: 0; border-radius: 8px;
+    background: #4c8eb7; color: #fff; font-size: 14px;
+    font-weight: 700; cursor: pointer; transition: .2s;
 }
-
-.btn-booking:hover {
-    background: rgb(48, 111, 151);
+.btn-booking:hover { background: #326f98; transform: translateY(-1px); }
+.btn-booking i { margin-right: 7px; }
+.secure-note { text-align: center; color: #9aa5ad; font-size: 11px; margin: 13px 0 0; }
+.secure-note i { margin-right: 5px; }
+@media (max-width: 850px) {
+    .ticket-layout { grid-template-columns: 1fr; max-width: 650px; }
 }
-
-.btn-booking i {
-    margin-right: 8px;
-}
-
-/* FOOTER */
-
-.ticket-footer {
-    background: rgb(76, 142, 183);
-    color: white;
-    text-align: center;
-    padding: 22px 15px;
-    font-size: 14px;
-}
-
-/* RESPONSIVE */
-
-@media (max-width: 768px) {
-
-    .ticket-main {
-        padding: 25px 15px;
-    }
-
-    .ticket-layout {
-        grid-template-columns: 1fr;
-        gap: 20px;
-    }
-
-    .ticket-header {
-        flex-direction: column;
-        gap: 15px;
-    }
-
-    .ticket-nav {
-        gap: 15px;
-        flex-wrap: wrap;
-        justify-content: center;
-    }
-
-    .ticket-title h1 {
-        font-size: 24px;
-    }
-
-    .event-content,
-    .booking-card {
-        padding: 20px;
-    }
-
-    .ticket-top {
-        flex-direction: column;
-        gap: 8px;
-        align-items: center;
-    }
+@media (max-width: 600px) {
+    .ticket-main { padding: 32px 14px 45px; }
+    .ticket-title h1 { font-size: 27px; }
+    .event-content, .booking-card { padding: 22px 19px; }
+    .event-cover { min-height: 205px; }
+    .ticket-total strong { font-size: 18px; }
 }

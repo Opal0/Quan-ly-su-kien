@@ -1,49 +1,32 @@
 document.addEventListener("DOMContentLoaded", function () {
-
     const ticketSelect = document.getElementById("MaVe");
     const quantityInput = document.getElementById("SoLuong");
     const totalPrice = document.getElementById("totalPrice");
     const bookingForm = document.getElementById("bookingForm");
 
-    // Định dạng tiền Việt Nam
+    if (!ticketSelect || !quantityInput || !totalPrice || !bookingForm) return;
+
     function formatMoney(amount) {
         return amount.toLocaleString("vi-VN") + " VNĐ";
     }
 
-    // Tính tổng tiền
     function calculateTotal() {
+        const option = ticketSelect.options[ticketSelect.selectedIndex];
+        const price = Number(option.dataset.price) || 0;
+        let quantity = Number(quantityInput.value) || 1;
 
-        const selectedOption =
-            ticketSelect.options[ticketSelect.selectedIndex];
+        if (quantity < 1) quantity = 1;
+        if (quantity > 10) quantity = 10;
 
-        const price = Number(selectedOption.dataset.price) || 0;
-
-        const quantity = Number(quantityInput.value) || 1;
-
-        const total = price * quantity;
-
-        totalPrice.textContent = formatMoney(total);
+        totalPrice.textContent = formatMoney(price * quantity);
     }
 
-    // Khi thay đổi loại vé
     ticketSelect.addEventListener("change", calculateTotal);
-
-    // Khi thay đổi số lượng
     quantityInput.addEventListener("input", calculateTotal);
-
-    // Tính tiền ban đầu
     calculateTotal();
 
-    // Kiểm tra form demo
     bookingForm.addEventListener("submit", function (event) {
-
         event.preventDefault();
-
-        alert(
-            "Giao diện đăng ký đã nhận thông tin. " +
-            "Chức năng lưu đăng ký vào MySQL cần được tích hợp tiếp."
-        );
-
+        alert("Giao diện đã nhận thông tin đặt vé. Chức năng lưu đăng ký vào MySQL và thanh toán cần được tích hợp ở backend.");
     });
-
 });
