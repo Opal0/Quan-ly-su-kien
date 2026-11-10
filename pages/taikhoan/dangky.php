@@ -49,7 +49,7 @@ require __DIR__ . '/../../components/header.php';
 <link rel="stylesheet" href="<?= BASE_URL ?>/pages/taikhoan/taikhoan.css">
 <link rel="stylesheet"
           href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css">
-<div class="main-content">
+<main class="main-content">
     <form class="auth-card" method="post" novalidate>
         <h2 class="auth-title">Đăng ký tài khoản</h2>
         <?php foreach ($errors as $er): ?><p class="alert error"><?= e($er) ?></p><?php endforeach; ?>
@@ -77,11 +77,11 @@ require __DIR__ . '/../../components/header.php';
         </div>
 
         <div class="form-button">
-            <button class="btn" type="submit">Đăng ký</button>
+            <button class="btn" id="register-button" type="submit">Đăng ký</button>
         </div>
         <p class="form-link">Đã có tài khoản? <a href="dangnhap.php">Đăng nhập</a></p>
     </form>
-</div>
+</main>
 <?php require_once ROOT_PATH . '/components/footer.php'; ?>
 
 <script src="<?= BASE_URL ?>/assets/js/components.js"></script>

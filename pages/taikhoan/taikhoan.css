@@ -19,7 +19,7 @@
     justify-content: flex-end;
     margin-top: 20px;
 }
-#update-info, #update-password {
+#update-info, #update-password,#login-button,#register-button {
     font-weight: bold;
     background-color: rgb(76, 142, 183);
     color: white;
