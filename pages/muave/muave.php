@@ -76,6 +76,34 @@ function formatTime($start, $end) {
 }
 ?>
 
+
+<?php
+require_once __DIR__ . '/../../includes/auth.php';
+
+// Khởi tạo thông tin người mua
+$nguoiMua = [
+    'HoTen' => '',
+    'Email' => '',
+    'SoDienThoai' => ''
+];
+
+// Nếu đã đăng nhập, lấy thông tin từ database
+if (isLoggedIn()) {
+    $userId = (int) $_SESSION['user_id'];
+
+    $stmt = getDB()->prepare("
+        SELECT HoTen, Email, SoDienThoai
+        FROM nguoidung
+        WHERE ID = ?
+    ");
+
+    $stmt->execute([$userId]);
+
+    $nguoiMua = $stmt->fetch(PDO::FETCH_ASSOC) ?: $nguoiMua;
+}
+?>
+
+
 <!DOCTYPE html>
 <html lang="vi">
 <head>
@@ -95,11 +123,6 @@ function formatTime($start, $end) {
 </head>
 
 <body>
-
-<?php
-include ROOT_PATH . '/components/top.php';
-include ROOT_PATH . '/components/header.php';
-?>
 
 <main class="ticket-main">
 
@@ -336,47 +359,52 @@ include ROOT_PATH . '/components/header.php';
                     </h3>
                 </div>
 
-                <div class="form-group">
-                    <label for="name">
-                        Họ và tên <span>*</span>
-                    </label>
+                
+<div class="form-group">
+    <label for="name">
+        Họ và tên <span>*</span>
+    </label>
 
-                    <input
-                        type="text"
-                        id="name"
-                        name="HoTen"
-                        placeholder="Ví dụ: Nguyễn Văn An"
-                        required
-                    >
-                </div>
+    <input
+        type="text"
+        id="name"
+        name="HoTen"
+        value="<?= e($nguoiMua['HoTen']) ?>"
+        placeholder="Nhập họ và tên"
+        required
+    >
+</div>
 
-                <div class="form-group">
-                    <label for="email">
-                        Email <span>*</span>
-                    </label>
+<div class="form-group">
+    <label for="email">
+        Email <span>*</span>
+    </label>
 
-                    <input
-                        type="email"
-                        id="email"
-                        name="Email"
-                        placeholder="name@example.com"
-                        required
-                    >
-                </div>
+    <input
+        type="email"
+        id="email"
+        name="Email"
+        value="<?= e($nguoiMua['Email']) ?>"
+        placeholder="Nhập email"
+        required
+    >
+</div>
 
-                <div class="form-group">
-                    <label for="phone">
-                        Số điện thoại <span>*</span>
-                    </label>
+<div class="form-group">
+    <label for="phone">
+        Số điện thoại <span>*</span>
+    </label>
 
-                    <input
-                        type="tel"
-                        id="phone"
-                        name="SoDienThoai"
-                        placeholder="Nhập số điện thoại"
-                        required
-                    >
-                </div>
+    <input
+        type="tel"
+        id="phone"
+        name="SoDienThoai"
+        value="<?= e($nguoiMua['SoDienThoai']) ?>"
+        placeholder="Nhập số điện thoại"
+        required
+    >
+</div>
+
 
                 <div class="ticket-total">
                     <div>
