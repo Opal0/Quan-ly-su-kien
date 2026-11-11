@@ -13,23 +13,41 @@ $loi = '';
 
 try {
     // Lấy danh sách vé của người dùng đang đăng nhập
-    $stmt = $db->prepare("
-        SELECT
-            d.ID,
-            d.NgayDangKy,
-            d.TrangThai,
-            d.MaVe,
-            d.TrangThaiCheckIn,
-            d.ThoiGianCheckIn,
-            s.TenSuKien,
-            s.DiaDiem,
-            s.ThoiGianBatDau,
-            s.ThoiGianKetThuc
-        FROM dangkysukien d
-        JOIN sukien s ON d.ID_SuKien = s.ID
-        WHERE d.ID_NguoiDung = ?
-        ORDER BY d.NgayDangKy DESC
-    ");
+    
+$stmt = $db->prepare("
+    SELECT
+        d.ID,
+        d.NgayDangKy,
+        d.TrangThai,
+        d.MaVe,
+        d.TrangThaiCheckIn,
+        d.ThoiGianCheckIn,
+
+        d.SoLuong,
+        d.DonGia,
+        d.ThanhTien,
+        d.ID_LoaiVe,
+
+        lv.TenLoaiVe,
+
+        s.TenSuKien,
+        s.DiaDiem,
+        s.ThoiGianBatDau,
+        s.ThoiGianKetThuc
+
+    FROM dangkysukien d
+
+    JOIN sukien s
+        ON d.ID_SuKien = s.ID
+
+    LEFT JOIN loaive lv
+        ON d.ID_LoaiVe = lv.ID
+
+    WHERE d.ID_NguoiDung = ?
+
+    ORDER BY d.NgayDangKy DESC
+");
+
 
     $stmt->execute([$id_nguoi_dung]);
     $danh_sach_ve = $stmt->fetchAll();
@@ -43,6 +61,7 @@ $pageTitle = 'Vé của tôi - Music4Life';
 require __DIR__ . '/../../components/top.php';
 require __DIR__ . '/../../components/header.php';
 ?>
+
 
 <style>
     .ticket-container {
@@ -122,7 +141,11 @@ require __DIR__ . '/../../components/header.php';
 <div class="ticket-container">
 
     <h1>Vé của tôi</h1>
-
+    <?php if (isset($_GET['purchased'])): ?>
+    <div class="message">
+        Mua vé thành công! Vé của bạn đã được lưu vào hệ thống.
+    </div>
+<?php endif; ?>
     <?php if (isset($_GET['registered'])): ?>
         <div class="message">
             Đăng ký sự kiện thành công!
@@ -161,10 +184,42 @@ require __DIR__ . '/../../components/header.php';
 
                 <h3><?= e($ve['TenSuKien']) ?></h3>
 
-                <p class="ticket-info">
-                    <strong>Địa điểm:</strong>
-                    <?= e($ve['DiaDiem']) ?>
-                </p>
+                
+<p class="ticket-info">
+    <strong>Mã vé:</strong>
+    <?= e($ve['MaVe']) ?>
+</p>
+
+<?php if ($ve['ID_LoaiVe'] !== null): ?>
+
+    <p class="ticket-info">
+        <strong>Loại vé:</strong>
+        <?= e($ve['TenLoaiVe'] ?? 'Loại vé không còn tồn tại') ?>
+    </p>
+
+    <p class="ticket-info">
+        <strong>Số lượng:</strong>
+        <?= (int)$ve['SoLuong'] ?> vé
+    </p>
+
+    <p class="ticket-info">
+        <strong>Đơn giá:</strong>
+        <?= (float)$ve['DonGia'] <= 0
+            ? 'Miễn phí'
+            : number_format((float)$ve['DonGia'], 0, ',', '.') . ' VNĐ' ?>
+    </p>
+
+    <p class="ticket-info">
+        <strong>Thành tiền:</strong>
+        <strong>
+            <?= (float)$ve['ThanhTien'] <= 0
+                ? 'Miễn phí'
+                : number_format((float)$ve['ThanhTien'], 0, ',', '.') . ' VNĐ' ?>
+        </strong>
+    </p>
+
+<?php endif; ?>
+
 
                 <p class="ticket-info">
                     <strong>Thời gian bắt đầu:</strong>

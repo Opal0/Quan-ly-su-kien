@@ -237,25 +237,4 @@ document.addEventListener("DOMContentLoaded", function () {
     // Cập nhật thông tin ngay khi mở trang.
     renderEventDetails();
 
-
-    // Xử lý nút xác nhận đặt vé (hiện vẫn là demo).
-    bookingForm.addEventListener("submit", function (event) {
-
-        event.preventDefault();
-
-        if (ticketSelect.disabled || !ticketSelect.value) {
-
-            alert("Sự kiện này hiện chưa có loại vé để đặt.");
-
-            return;
-        }
-
-        alert(
-            "Giao diện đã nhận thông tin đặt vé. " +
-            "Chức năng lưu đăng ký vào MySQL và thanh toán " +
-            "cần được tích hợp ở backend."
-        );
-
     });
-
-});

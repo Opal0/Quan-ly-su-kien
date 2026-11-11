@@ -2,9 +2,231 @@
 require_once __DIR__ . '/../../config/app.php';
 require_once ROOT_PATH . '/includes/auth.php';
 
+
 $pdo = getDB();
+
+// Xử lý khi người dùng bấm xác nhận đặt vé.
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+
+    // Bắt buộc đăng nhập.
+    requireLogin();
+
+    // Kiểm tra CSRF.
+    if (!csrfValid()) {
+        die('Yêu cầu không hợp lệ. Vui lòng tải lại trang.');
+    }
+
+    $userId = (int) $_SESSION['user_id'];
+    $eventId = (int) ($_POST['ID_SuKien'] ?? 0);
+    $ticketId = (int) ($_POST['ID_LoaiVe'] ?? 0);
+    $quantity = (int) ($_POST['SoLuong'] ?? 0);
+
+    try {
+
+        if ($eventId <= 0 || $ticketId <= 0) {
+            throw new Exception('Vui lòng chọn sự kiện và loại vé.');
+        }
+
+        if ($quantity < 1 || $quantity > 10) {
+            throw new Exception('Số lượng vé phải từ 1 đến 10.');
+        }
+
+        $pdo->beginTransaction();
+
+        // Khóa sự kiện để tránh nhiều người mua vượt số lượng.
+        $stmtEvent = $pdo->prepare("
+            SELECT ID, TenSuKien, ThoiGianBatDau,
+                   SoLuongToiDa, TrangThai
+            FROM sukien
+            WHERE ID = ?
+            FOR UPDATE
+        ");
+
+        $stmtEvent->execute([$eventId]);
+        $event = $stmtEvent->fetch(PDO::FETCH_ASSOC);
+
+        if (!$event) {
+            throw new Exception('Không tìm thấy sự kiện.');
+        }
+
+        if (in_array($event['TrangThai'], ['da_huy', 'da_ket_thuc'], true)) {
+            throw new Exception('Sự kiện không còn nhận đặt vé.');
+        }
+
+        if (strtotime($event['ThoiGianBatDau']) <= time()) {
+            throw new Exception('Sự kiện đã bắt đầu, không thể đặt vé.');
+        }
+
+        // Kiểm tra loại vé có thuộc sự kiện đang chọn không.
+        $stmtTicket = $pdo->prepare("
+            SELECT ID, ID_SuKien, TenLoaiVe,
+                   GiaVe, SoLuongToiDa
+            FROM loaive
+            WHERE ID = ?
+              AND ID_SuKien = ?
+              AND TrangThai = 1
+            FOR UPDATE
+        ");
+
+        $stmtTicket->execute([$ticketId, $eventId]);
+        $ticket = $stmtTicket->fetch(PDO::FETCH_ASSOC);
+
+        if (!$ticket) {
+            throw new Exception('Loại vé không hợp lệ hoặc đã ngừng bán.');
+        }
+
+        // Kiểm tra người dùng đã đặt sự kiện này chưa.
+        $stmtOld = $pdo->prepare("
+            SELECT ID, TrangThai, ID_LoaiVe
+            FROM dangkysukien
+            WHERE ID_NguoiDung = ?
+              AND ID_SuKien = ?
+            LIMIT 1
+            FOR UPDATE
+        ");
+
+        $stmtOld->execute([$userId, $eventId]);
+        $oldBooking = $stmtOld->fetch(PDO::FETCH_ASSOC);
+
+        if (
+    $oldBooking &&
+    $oldBooking['TrangThai'] === 'da_dang_ky' &&
+    $oldBooking['ID_LoaiVe'] !== null
+) {
+    throw new Exception('Bạn đã đặt vé cho sự kiện này rồi.');
+}
+
+        // Đếm số vé đã bán của loại vé đang chọn.
+        $stmtSoldTicket = $pdo->prepare("
+            SELECT COALESCE(SUM(SoLuong), 0)
+            FROM dangkysukien
+            WHERE ID_LoaiVe = ?
+              AND TrangThai = 'da_dang_ky'
+        ");
+
+        $stmtSoldTicket->execute([$ticketId]);
+        $soldTicket = (int) $stmtSoldTicket->fetchColumn();
+
+        $ticketLimit = (int) $ticket['SoLuongToiDa'];
+
+        // SoLuongToiDa = 0 được hiểu là không giới hạn.
+        if (
+            $ticketLimit > 0 &&
+            $soldTicket + $quantity > $ticketLimit
+        ) {
+            throw new Exception('Loại vé này không còn đủ số lượng.');
+        }
+
+        // Kiểm tra tổng sức chứa của sự kiện.
+        $stmtSoldEvent = $pdo->prepare("
+            SELECT COALESCE(SUM(SoLuong), 0)
+            FROM dangkysukien
+            WHERE ID_SuKien = ?
+              AND TrangThai = 'da_dang_ky'
+        ");
+
+        $stmtSoldEvent->execute([$eventId]);
+        $soldEvent = (int) $stmtSoldEvent->fetchColumn();
+
+        $eventLimit = (int) $event['SoLuongToiDa'];
+
+        if ($eventLimit > 0 && $soldEvent + $quantity > $eventLimit) {
+            throw new Exception('Sự kiện không còn đủ chỗ.');
+        }
+
+        // Tính tiền ở phía server, không lấy giá từ JavaScript.
+        $unitPrice = (float) $ticket['GiaVe'];
+        $totalPrice = $unitPrice * $quantity;
+
+        // Tạo mã vé duy nhất.
+        $ticketCode = strtoupper(bin2hex(random_bytes(8)));
+
+        if ($oldBooking) {
+
+            // Người dùng từng hủy vé thì cho phép đặt lại.
+            $stmtSave = $pdo->prepare("
+                UPDATE dangkysukien
+                SET
+                    NgayDangKy = NOW(),
+                    TrangThai = 'da_dang_ky',
+                    MaVe = ?,
+                    ID_LoaiVe = ?,
+                    SoLuong = ?,
+                    DonGia = ?,
+                    ThanhTien = ?,
+                    TrangThaiCheckIn = 'chua_checkin',
+                    ThoiGianCheckIn = NULL
+                WHERE ID = ?
+            ");
+
+            $stmtSave->execute([
+                $ticketCode,
+                $ticketId,
+                $quantity,
+                $unitPrice,
+                $totalPrice,
+                $oldBooking['ID']
+            ]);
+
+        } else {
+
+            // Đặt vé lần đầu.
+            $stmtSave = $pdo->prepare("
+                INSERT INTO dangkysukien (
+                    ID_NguoiDung,
+                    ID_SuKien,
+                    ID_LoaiVe,
+                    NgayDangKy,
+                    TrangThai,
+                    MaVe,
+                    SoLuong,
+                    DonGia,
+                    ThanhTien,
+                    TrangThaiCheckIn
+                )
+                VALUES (?, ?, ?, NOW(), 'da_dang_ky', ?, ?, ?, ?, 'chua_checkin')
+            ");
+
+            $stmtSave->execute([
+                $userId,
+                $eventId,
+                $ticketId,
+                $ticketCode,
+                $quantity,
+                $unitPrice,
+                $totalPrice
+            ]);
+        }
+
+        $pdo->commit();
+
+        // Chuyển đến trang Vé của tôi.
+        header(
+            'Location: ' . BASE_URL .
+            '/pages/taikhoan/ve_cua_toi.php?purchased=1'
+        );
+        exit;
+
+    } catch (Throwable $ex) {
+
+        if ($pdo->inTransaction()) {
+            $pdo->rollBack();
+        }
+
+        error_log('Mua vé: ' . $ex->getMessage());
+
+        header(
+            'Location: ' . BASE_URL .
+            '/pages/muave/muave.php?event_id=' . $eventId .
+            '&error=' . urlencode($ex->getMessage())
+        );
+        exit;
+    }
+}
+
 $pageError = '';
 $events = [];
+
 $ticketsByEvent = [];
 $buyer = [
     'HoTen' => '',
@@ -334,8 +556,15 @@ $initialTickets = $selectedEventId > 0
 
                 <p>Vui lòng điền chính xác thông tin của bạn.</p>
             </div>
+            <?php if (!empty($_GET['error'])): ?>
+    <div class="ticket-note" role="alert">
+        <i class="fa-solid fa-circle-exclamation"></i>
+        <p><?= muave_escape($_GET['error']) ?></p>
+    </div>
+<?php endif; ?>
+            <form action="" method="post" id="bookingForm">
 
-            <form action="#" method="post" id="bookingForm">
+    <?= csrfField() ?>
 
                 <!-- CHỌN SỰ KIỆN -->
                 <div class="form-group">
