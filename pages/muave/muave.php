@@ -1,53 +1,151 @@
 <?php
 require_once __DIR__ . '/../../config/app.php';
-require_once ROOT_PATH . '/config/database.php';
+require_once ROOT_PATH . '/includes/auth.php';
 
-$db = getDB();
+$pdo = getDB();
+$pageError = '';
+$events = [];
+$ticketsByEvent = [];
+$buyer = [
+    'HoTen' => '',
+    'Email' => '',
+    'SoDienThoai' => ''
+];
 
-// Lấy danh sách sự kiện còn thời gian tổ chức
-$sql = "
-    SELECT
-        s.ID,
-        s.TenSuKien,
-        s.MoTa,
-        s.DiaDiem,
-        s.ThoiGianBatDau,
-        s.ThoiGianKetThuc,
-        s.TrangThai,
-        d.TenDanhMuc
-    FROM sukien s
-    LEFT JOIN danhmuc d ON s.ID_DanhMuc = d.ID
-    WHERE s.TrangThai IN ('sap_dien_ra', 'dang_dien_ra')
-      AND s.ThoiGianKetThuc >= NOW()
-    ORDER BY s.ThoiGianBatDau ASC
-";
+// Lấy danh sách sự kiện còn thời gian tổ chức.
+try {
+    $sqlEvents = "SELECT
+                    s.ID,
+                    s.TenSuKien,
+                    COALESCE(d.TenDanhMuc, 'Sự kiện') AS TenDanhMuc,
+                    s.MoTa,
+                    s.DiaDiem,
+                    s.ThoiGianBatDau,
+                    s.ThoiGianKetThuc
+                  FROM sukien s
+                  LEFT JOIN danhmuc d ON d.ID = s.ID_DanhMuc
+                  WHERE s.TrangThai <> 'da_huy'
+                    AND s.ThoiGianKetThuc >= NOW()
+                  ORDER BY s.ThoiGianBatDau ASC";
 
-$stmt = $db->prepare($sql);
-$stmt->execute();
-$danhSachSuKien = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    $events = $pdo->query($sqlEvents)->fetchAll(PDO::FETCH_ASSOC);
 
-// Lấy ID sự kiện được truyền từ trang Sự kiện
-$eventId = isset($_GET['event_id'])
+    // Lấy các loại vé đang mở bán.
+    $sqlTickets = "SELECT
+                        ID,
+                        ID_SuKien,
+                        TenLoaiVe,
+                        GiaVe,
+                        SoLuongToiDa
+                   FROM loaive
+                   WHERE TrangThai = 1
+                   ORDER BY GiaVe ASC, ID ASC";
+
+    $allTickets = $pdo->query($sqlTickets)->fetchAll(PDO::FETCH_ASSOC);
+
+    // Nhóm loại vé theo từng sự kiện.
+    foreach ($allTickets as $ticket) {
+        $eventId = (int)$ticket['ID_SuKien'];
+
+        $ticketsByEvent[$eventId][] = [
+            'id' => (int)$ticket['ID'],
+            'name' => (string)$ticket['TenLoaiVe'],
+            'price' => (float)$ticket['GiaVe'],
+            'quantity' => (int)$ticket['SoLuongToiDa']
+        ];
+    }
+
+} catch (PDOException $ex) {
+    error_log('muave.php: ' . $ex->getMessage());
+    $pageError = 'Không thể tải dữ liệu sự kiện hoặc loại vé. Vui lòng kiểm tra lại database.';
+}
+
+// Chọn sự kiện theo event_id trên URL.
+$requestedEventId = isset($_GET['event_id'])
     ? (int)$_GET['event_id']
     : 0;
 
-// Tìm sự kiện được chọn
-$suKienDuocChon = null;
+$selectedEvent = null;
 
-foreach ($danhSachSuKien as $item) {
-    if ((int)$item['ID'] === $eventId) {
-        $suKienDuocChon = $item;
+foreach ($events as $event) {
+    if ((int)$event['ID'] === $requestedEventId) {
+        $selectedEvent = $event;
         break;
     }
 }
 
-// Nếu không có ID hợp lệ thì chọn sự kiện đầu tiên
-if (!$suKienDuocChon && !empty($danhSachSuKien)) {
-    $suKienDuocChon = $danhSachSuKien[0];
+// Nếu URL không có ID hợp lệ thì chọn sự kiện đầu tiên.
+if (!$selectedEvent && !empty($events)) {
+    $selectedEvent = $events[0];
 }
 
-// Hàm định dạng dữ liệu an toàn
-function h($value) {
+$selectedEventId = $selectedEvent
+    ? (int)$selectedEvent['ID']
+    : 0;
+
+// Lấy thông tin người mua từ tài khoản đang đăng nhập.
+if (isLoggedIn()) {
+    try {
+        $stmtBuyer = $pdo->prepare(
+            'SELECT HoTen, Email, SoDienThoai
+             FROM nguoidung
+             WHERE ID = ?
+             LIMIT 1'
+        );
+
+        $stmtBuyer->execute([(int)$_SESSION['user_id']]);
+
+        $dbBuyer = $stmtBuyer->fetch(PDO::FETCH_ASSOC);
+
+        if ($dbBuyer) {
+            $buyer = array_merge($buyer, $dbBuyer);
+        }
+
+    } catch (PDOException $ex) {
+        error_log('muave.php buyer: ' . $ex->getMessage());
+    }
+}
+
+// Chuẩn bị dữ liệu sự kiện và loại vé cho JavaScript.
+$eventData = [];
+
+foreach ($events as $event) {
+    $id = (int)$event['ID'];
+
+    $start = !empty($event['ThoiGianBatDau'])
+        ? strtotime($event['ThoiGianBatDau'])
+        : false;
+
+    $end = !empty($event['ThoiGianKetThuc'])
+        ? strtotime($event['ThoiGianKetThuc'])
+        : false;
+
+    $eventData[$id] = [
+        'id' => $id,
+        'name' => (string)$event['TenSuKien'],
+        'category' => (string)$event['TenDanhMuc'],
+
+        'description' => trim((string)$event['MoTa']) !== ''
+            ? (string)$event['MoTa']
+            : 'Thông tin giới thiệu sự kiện sẽ được cập nhật sớm.',
+
+        'location' => (string)$event['DiaDiem'],
+
+        'date' => $start
+            ? date('d/m/Y', $start)
+            : 'Đang cập nhật',
+
+        'time' => $start
+            ? date('H:i', $start) . ($end ? ' – ' . date('H:i', $end) : '')
+            : 'Đang cập nhật',
+
+        // Loại vé riêng của sự kiện.
+        'tickets' => $ticketsByEvent[$id] ?? []
+    ];
+}
+
+// Hàm xử lý dữ liệu hiển thị an toàn.
+function muave_escape($value): string {
     return htmlspecialchars(
         (string)$value,
         ENT_QUOTES,
@@ -55,54 +153,10 @@ function h($value) {
     );
 }
 
-// Hàm định dạng ngày
-function formatDate($date) {
-    return $date
-        ? date('d/m/Y', strtotime($date))
-        : 'Chưa cập nhật';
-}
-
-// Hàm định dạng giờ
-function formatTime($start, $end) {
-    if (!$start) return 'Chưa cập nhật';
-
-    $result = date('H:i', strtotime($start));
-
-    if ($end) {
-        $result .= ' – ' . date('H:i', strtotime($end));
-    }
-
-    return $result;
-}
+$initialTickets = $selectedEventId > 0
+    ? ($ticketsByEvent[$selectedEventId] ?? [])
+    : [];
 ?>
-
-
-<?php
-require_once __DIR__ . '/../../includes/auth.php';
-
-// Khởi tạo thông tin người mua
-$nguoiMua = [
-    'HoTen' => '',
-    'Email' => '',
-    'SoDienThoai' => ''
-];
-
-// Nếu đã đăng nhập, lấy thông tin từ database
-if (isLoggedIn()) {
-    $userId = (int) $_SESSION['user_id'];
-
-    $stmt = getDB()->prepare("
-        SELECT HoTen, Email, SoDienThoai
-        FROM nguoidung
-        WHERE ID = ?
-    ");
-
-    $stmt->execute([$userId]);
-
-    $nguoiMua = $stmt->fetch(PDO::FETCH_ASSOC) ?: $nguoiMua;
-}
-?>
-
 
 <!DOCTYPE html>
 <html lang="vi">
@@ -112,36 +166,25 @@ if (isLoggedIn()) {
 
     <title>Mua vé sự kiện | Music For Life</title>
 
-    <link rel="stylesheet"
-          href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800&display=swap">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800&display=swap">
 
     <link rel="stylesheet" href="../../assets/css/style.css">
     <link rel="stylesheet" href="muave.css?v=4">
 
-    <link rel="stylesheet"
-          href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css">
 </head>
-
 
 <body>
 
-<?php
-// Thanh thông tin phía trên
-include __DIR__ . '/../../components/top.php';
-
-// Header và thanh điều hướng
-include ROOT_PATH . '/components/header.php';
-?>
+<?php include __DIR__ . '/../../components/top.php'; ?>
+<?php include ROOT_PATH . '/components/header.php'; ?>
 
 <main class="ticket-main">
 
-
-    <!-- Cá hologram trang trí -->
     <div class="holo-fish fish-one" aria-hidden="true"></div>
     <div class="holo-fish fish-two" aria-hidden="true"></div>
     <div class="holo-fish fish-three" aria-hidden="true"></div>
     <div class="holo-fish fish-four" aria-hidden="true"></div>
-
     <div class="holo-bubbles" aria-hidden="true"></div>
 
     <div class="ticket-title">
@@ -152,85 +195,100 @@ include ROOT_PATH . '/components/header.php';
         <h1>Đặt vé sự kiện</h1>
 
         <p>
-            Chọn sự kiện, loại vé phù hợp và sẵn sàng
-            trải nghiệm những khoảnh khắc đáng nhớ.
+            Chọn loại vé phù hợp và sẵn sàng trải nghiệm
+            những khoảnh khắc đáng nhớ.
         </p>
     </div>
 
+    <?php if ($pageError !== ''): ?>
+        <div class="ticket-note" role="alert">
+            <i class="fa-solid fa-circle-exclamation"></i>
+            <p><?= muave_escape($pageError) ?></p>
+        </div>
+    <?php endif; ?>
+
     <div class="ticket-layout">
 
-        <!-- KHUNG SỰ KIỆN BÊN TRÁI -->
+        <!-- KHUNG THÔNG TIN SỰ KIỆN -->
         <section class="event-card">
 
             <div class="event-cover">
 
-                <span class="cover-label">SỰ KIỆN NỔI BẬT</span>
+                <span class="cover-label" id="eventCoverLabel">
+                    <?= $selectedEvent
+                        ? muave_escape(mb_strtoupper($selectedEvent['TenDanhMuc'], 'UTF-8'))
+                        : 'SỰ KIỆN NỔI BẬT' ?>
+                </span>
 
                 <i class="fa-solid fa-music"></i>
 
-                <h2 id="eventCoverTitle">
-                    <?= $suKienDuocChon
-                        ? h($suKienDuocChon['TenSuKien'])
-                        : 'CHƯA CÓ SỰ KIỆN' ?>
-                </h2>
+                <h2>MUSIC FOR LIFE</h2>
 
-                <p id="eventCoverSubtitle">
-                    <?= $suKienDuocChon
-                        ? h($suKienDuocChon['TenDanhMuc'] ?? 'Sự kiện')
-                        : 'Vui lòng quay lại sau' ?>
-                </p>
-
+                <p>Âm nhạc kết nối cảm xúc</p>
             </div>
 
             <div class="event-content">
 
                 <span class="event-tag" id="eventCategory">
-                    <?= $suKienDuocChon
-                        ? h($suKienDuocChon['TenDanhMuc'] ?? 'Sự kiện')
-                        : 'Chưa có danh mục' ?>
+                    <?= $selectedEvent
+                        ? muave_escape($selectedEvent['TenDanhMuc'])
+                        : 'Chưa có sự kiện' ?>
                 </span>
 
                 <h2 id="eventName">
-                    <?= $suKienDuocChon
-                        ? h($suKienDuocChon['TenSuKien'])
-                        : 'Hiện chưa có sự kiện' ?>
+                    <?= $selectedEvent
+                        ? muave_escape($selectedEvent['TenSuKien'])
+                        : 'Hiện chưa có sự kiện phù hợp' ?>
                 </h2>
 
                 <div class="event-detail">
                     <i class="fa-regular fa-calendar"></i>
+
                     <div>
                         <span>Ngày tổ chức</span>
+
                         <strong id="eventDate">
-                            <?= $suKienDuocChon
-                                ? formatDate($suKienDuocChon['ThoiGianBatDau'])
-                                : 'Chưa cập nhật' ?>
+                            <?= $selectedEvent && $selectedEvent['ThoiGianBatDau']
+                                ? date('d/m/Y', strtotime($selectedEvent['ThoiGianBatDau']))
+                                : 'Đang cập nhật' ?>
                         </strong>
                     </div>
                 </div>
 
                 <div class="event-detail">
                     <i class="fa-regular fa-clock"></i>
+
                     <div>
                         <span>Thời gian</span>
+
                         <strong id="eventTime">
-                            <?= $suKienDuocChon
-                                ? formatTime(
-                                    $suKienDuocChon['ThoiGianBatDau'],
-                                    $suKienDuocChon['ThoiGianKetThuc']
-                                )
-                                : 'Chưa cập nhật' ?>
+                            <?php if ($selectedEvent && $selectedEvent['ThoiGianBatDau']): ?>
+
+                                <?= date('H:i', strtotime($selectedEvent['ThoiGianBatDau'])) ?>
+
+                                <?= $selectedEvent['ThoiGianKetThuc']
+                                    ? ' – ' . date('H:i', strtotime($selectedEvent['ThoiGianKetThuc']))
+                                    : '' ?>
+
+                            <?php else: ?>
+
+                                Đang cập nhật
+
+                            <?php endif; ?>
                         </strong>
                     </div>
                 </div>
 
                 <div class="event-detail">
                     <i class="fa-solid fa-location-dot"></i>
+
                     <div>
                         <span>Địa điểm</span>
+
                         <strong id="eventLocation">
-                            <?= $suKienDuocChon
-                                ? h($suKienDuocChon['DiaDiem'])
-                                : 'Chưa cập nhật' ?>
+                            <?= $selectedEvent
+                                ? muave_escape($selectedEvent['DiaDiem'])
+                                : 'Đang cập nhật' ?>
                         </strong>
                     </div>
                 </div>
@@ -239,9 +297,9 @@ include ROOT_PATH . '/components/header.php';
                     <h3>Về sự kiện</h3>
 
                     <p id="eventDescription">
-                        <?= $suKienDuocChon
-                            ? h($suKienDuocChon['MoTa'])
-                            : 'Hiện chưa có thông tin sự kiện.' ?>
+                        <?= $selectedEvent && trim((string)$selectedEvent['MoTa']) !== ''
+                            ? nl2br(muave_escape($selectedEvent['MoTa']))
+                            : 'Thông tin giới thiệu sự kiện sẽ được cập nhật sớm.' ?>
                     </p>
                 </div>
 
@@ -265,7 +323,8 @@ include ROOT_PATH . '/components/header.php';
             </div>
         </section>
 
-        <!-- KHUNG THÔNG TIN ĐẶT VÉ -->
+
+        <!-- KHUNG ĐẶT VÉ -->
         <section class="booking-card">
 
             <div class="booking-title">
@@ -278,7 +337,9 @@ include ROOT_PATH . '/components/header.php';
 
             <form action="#" method="post" id="bookingForm">
 
+                <!-- CHỌN SỰ KIỆN -->
                 <div class="form-group">
+
                     <label for="event">
                         Sự kiện <span>*</span>
                     </label>
@@ -287,32 +348,24 @@ include ROOT_PATH . '/components/header.php';
                         id="event"
                         name="ID_SuKien"
                         required
-                        <?= empty($danhSachSuKien) ? 'disabled' : '' ?>
+                        <?= empty($events) ? 'disabled' : '' ?>
                     >
 
-                        <?php if (empty($danhSachSuKien)): ?>
+                        <?php if (empty($events)): ?>
 
                             <option value="">
-                                Hiện chưa có sự kiện
+                                Hiện chưa có sự kiện sắp diễn ra
                             </option>
 
                         <?php else: ?>
 
-                            <?php foreach ($danhSachSuKien as $item): ?>
+                            <?php foreach ($events as $event): ?>
 
                                 <option
-                                    value="<?= (int)$item['ID'] ?>"
-                                    data-name="<?= h($item['TenSuKien']) ?>"
-                                    data-category="<?= h($item['TenDanhMuc'] ?? 'Sự kiện') ?>"
-                                    data-date="<?= formatDate($item['ThoiGianBatDau']) ?>"
-                                    data-time="<?= formatTime($item['ThoiGianBatDau'], $item['ThoiGianKetThuc']) ?>"
-                                    data-location="<?= h($item['DiaDiem']) ?>"
-                                    data-description="<?= h($item['MoTa']) ?>"
-                                    <?= $suKienDuocChon && (int)$item['ID'] === (int)$suKienDuocChon['ID']
-                                        ? 'selected'
-                                        : '' ?>
+                                    value="<?= (int)$event['ID'] ?>"
+                                    <?= (int)$event['ID'] === $selectedEventId ? 'selected' : '' ?>
                                 >
-                                    <?= h($item['TenSuKien']) ?>
+                                    <?= muave_escape($event['TenSuKien']) ?>
                                 </option>
 
                             <?php endforeach; ?>
@@ -322,27 +375,62 @@ include ROOT_PATH . '/components/header.php';
                     </select>
                 </div>
 
+
+                <!-- CHỌN LOẠI VÉ THEO SỰ KIỆN -->
                 <div class="form-group">
+
                     <label for="MaVe">
                         Loại vé <span>*</span>
                     </label>
 
-                    <select id="MaVe" name="MaVe" required>
-                        <option value="1" data-price="200000">
-                            Vé thường — 200.000 VNĐ
-                        </option>
+                    <select
+                        id="MaVe"
+                        name="ID_LoaiVe"
+                        required
+                        <?= empty($initialTickets) ? 'disabled' : '' ?>
+                    >
 
-                        <option value="2" data-price="500000">
-                            Vé VIP — 500.000 VNĐ
-                        </option>
+                        <?php if (empty($initialTickets)): ?>
 
-                        <option value="3" data-price="1000000">
-                            Vé VVIP — 1.000.000 VNĐ
-                        </option>
+                            <option value="">
+                                Sự kiện này hiện chưa mở bán vé
+                            </option>
+
+                        <?php else: ?>
+
+                            <?php foreach ($initialTickets as $ticket): ?>
+
+                                <option
+                                    value="<?= (int)$ticket['ID'] ?>"
+                                    data-price="<?= (float)$ticket['GiaVe'] ?>"
+                                >
+                                    <?= muave_escape($ticket['TenLoaiVe']) ?>
+
+                                    —
+
+                                    <?= (float)$ticket['GiaVe'] <= 0
+                                        ? 'Miễn phí'
+                                        : number_format((float)$ticket['GiaVe'], 0, ',', '.') . ' VNĐ' ?>
+                                </option>
+
+                            <?php endforeach; ?>
+
+                        <?php endif; ?>
+
                     </select>
+
+                    <small class="field-hint" id="ticketHint">
+                        <?= empty($initialTickets)
+                            ? 'Vui lòng chọn sự kiện khác hoặc quay lại sau.'
+                            : 'Các loại vé được thiết lập riêng cho sự kiện này.' ?>
+                    </small>
+
                 </div>
 
+
+                <!-- SỐ LƯỢNG -->
                 <div class="form-group">
+
                     <label for="SoLuong">
                         Số lượng vé <span>*</span>
                     </label>
@@ -360,8 +448,11 @@ include ROOT_PATH . '/components/header.php';
                     <small class="field-hint">
                         Bạn có thể đặt tối đa 10 vé trong một lần.
                     </small>
+
                 </div>
 
+
+                <!-- THÔNG TIN NGƯỜI MUA -->
                 <div class="form-divider">
                     <h3>
                         <i class="fa-regular fa-user"></i>
@@ -369,62 +460,80 @@ include ROOT_PATH . '/components/header.php';
                     </h3>
                 </div>
 
-                
-<div class="form-group">
-    <label for="name">
-        Họ và tên <span>*</span>
-    </label>
+                <div class="form-group">
 
-    <input
-        type="text"
-        id="name"
-        name="HoTen"
-        value="<?= e($nguoiMua['HoTen']) ?>"
-        placeholder="Nhập họ và tên"
-        required
-    >
-</div>
+                    <label for="name">
+                        Họ và tên <span>*</span>
+                    </label>
 
-<div class="form-group">
-    <label for="email">
-        Email <span>*</span>
-    </label>
+                    <input
+                        type="text"
+                        id="name"
+                        name="HoTen"
+                        value="<?= muave_escape($buyer['HoTen']) ?>"
+                        placeholder="Ví dụ: Nguyễn Văn An"
+                        required
+                    >
 
-    <input
-        type="email"
-        id="email"
-        name="Email"
-        value="<?= e($nguoiMua['Email']) ?>"
-        placeholder="Nhập email"
-        required
-    >
-</div>
+                </div>
 
-<div class="form-group">
-    <label for="phone">
-        Số điện thoại <span>*</span>
-    </label>
+                <div class="form-group">
 
-    <input
-        type="tel"
-        id="phone"
-        name="SoDienThoai"
-        value="<?= e($nguoiMua['SoDienThoai']) ?>"
-        placeholder="Nhập số điện thoại"
-        required
-    >
-</div>
+                    <label for="email">
+                        Email <span>*</span>
+                    </label>
+
+                    <input
+                        type="email"
+                        id="email"
+                        name="Email"
+                        value="<?= muave_escape($buyer['Email']) ?>"
+                        placeholder="name@example.com"
+                        required
+                    >
+
+                </div>
+
+                <div class="form-group">
+
+                    <label for="phone">
+                        Số điện thoại <span>*</span>
+                    </label>
+
+                    <input
+                        type="tel"
+                        id="phone"
+                        name="SoDienThoai"
+                        value="<?= muave_escape($buyer['SoDienThoai']) ?>"
+                        placeholder="Nhập số điện thoại"
+                        required
+                    >
+
+                </div>
 
 
+                <!-- TỔNG TIỀN -->
                 <div class="ticket-total">
+
                     <div>
                         <span>Tổng thanh toán dự kiến</span>
                         <small>Đã bao gồm giá vé đã chọn</small>
                     </div>
 
-                    <strong id="totalPrice">200.000 VNĐ</strong>
+                    <strong id="totalPrice">
+                        <?= !empty($initialTickets)
+                            ? (
+                                (float)$initialTickets[0]['GiaVe'] <= 0
+                                    ? 'Miễn phí'
+                                    : number_format((float)$initialTickets[0]['GiaVe'], 0, ',', '.') . ' VNĐ'
+                            )
+                            : '0 VNĐ' ?>
+                    </strong>
+
                 </div>
 
+
+                <!-- GHI CHÚ -->
                 <div class="ticket-note">
                     <i class="fa-solid fa-circle-info"></i>
 
@@ -435,10 +544,13 @@ include ROOT_PATH . '/components/header.php';
                     </p>
                 </div>
 
+
+                <!-- NÚT ĐẶT VÉ -->
                 <button
                     type="submit"
                     class="btn-booking"
-                    <?= empty($danhSachSuKien) ? 'disabled' : '' ?>
+                    id="bookingButton"
+                    <?= empty($initialTickets) ? 'disabled' : '' ?>
                 >
                     <i class="fa-solid fa-ticket"></i>
                     Xác nhận đặt vé
@@ -450,15 +562,30 @@ include ROOT_PATH . '/components/header.php';
                 </p>
 
             </form>
+
         </section>
 
     </div>
 </main>
 
+
+<!-- DỮ LIỆU SỰ KIỆN CHO JAVASCRIPT -->
+<script type="application/json" id="eventData"><?=
+    json_encode(
+        $eventData,
+        JSON_UNESCAPED_UNICODE |
+        JSON_HEX_TAG |
+        JSON_HEX_APOS |
+        JSON_HEX_QUOT |
+        JSON_HEX_AMP
+    )
+?></script>
+
+
 <?php include ROOT_PATH . '/components/footer.php'; ?>
 
 <script src="../../assets/js/components.js"></script>
-<script src="muave.js?v=4"></script>
+<script src="muave.js?v=5"></script>
 
 </body>
 </html>
