@@ -32,16 +32,13 @@ function sk_action(array $ev, bool $isLoggedIn, array $myRegs, string $label = '
     if ($ev['status'] === 'past' || $ev['full']) {
         return '<button class="sk-btn sk-btn--ghost" disabled>' . ($ev['status'] === 'past' ? 'Đã kết thúc' : 'Hết chỗ') . '</button>';
     }
-    if (!$isLoggedIn) {
-        $base = defined('BASE_URL') ? rtrim(BASE_URL, '/') : '../..';
-        return '<a class="sk-btn" href="' . e($base . '/pages/taikhoan/dangnhap.php') . '">Đăng nhập để đăng ký</a>';
-    }
-    return '<form method="post" action="" class="sk-inline">'
-         . '<input type="hidden" name="csrf_token" value="' . e($_SESSION['csrf_token']) . '">'
-         . '<input type="hidden" name="event_id" value="' . (int)$ev['id'] . '">'
-         . '<input type="hidden" name="action" value="register">'
-         . '<button type="submit" class="sk-btn">' . e($label) . '</button>'
-         . '</form>';
+    
+$base = defined('BASE_URL') ? rtrim(BASE_URL, '/') : '../..';
+
+return '<a class="sk-btn" href="' .
+    e($base . '/pages/muave/muave.php?event_id=' . (int)$ev['id']) .
+    '">Chọn sự kiện / Đặt vé</a>';
+
 }
 ?>
 <!DOCTYPE html>
