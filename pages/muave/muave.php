@@ -122,9 +122,19 @@ if (isLoggedIn()) {
           href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css">
 </head>
 
+
 <body>
 
+<?php
+// Thanh thông tin phía trên
+include __DIR__ . '/../../components/top.php';
+
+// Header và thanh điều hướng
+include ROOT_PATH . '/components/header.php';
+?>
+
 <main class="ticket-main">
+
 
     <!-- Cá hologram trang trí -->
     <div class="holo-fish fish-one" aria-hidden="true"></div>
