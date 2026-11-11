@@ -1,9 +1,16 @@
+/* ===== Nền tảng responsive ===== */
+*, *::before, *::after {
+    box-sizing: border-box;
+}
+img { max-width: 100%; height: auto; }
 
-/* Trang tai khoan */
+/* ===== Trang tai khoan ===== */
 .main-content {
     display: flex;
     flex-direction: column;
     align-items: center;
+    width: 100%;
+    padding: 20px 16px;
 }
 .form-row {
     display: flex;
@@ -12,7 +19,8 @@
 }
 .gender-options {
     display: flex;
-    gap: 20px;
+    flex-wrap: wrap;          /* tránh tràn khi màn hình hẹp */
+    gap: 12px 20px;
 }
 .form-button {
     display: flex;
@@ -28,23 +36,24 @@
     border-radius: 5px;
     cursor: pointer;
 }
-.account-info{
+.account-info {
     width: 100%;
     max-width: 600px;
     background-color: #fff;
     padding: 20px;
     border-radius: 8px;
     box-shadow: 0 2px 12px rgba(0,0,0,.08);
-    margin:3px;
+    margin: 3px auto;
 }
 .account-title {
     text-align: center;
     margin-bottom: 20px;
-    font-size: 24px;
+    font-size: clamp(20px, 4vw, 24px);   /* co giãn theo màn hình */
     font-weight: bold;
     color: #fff;
 }
-/* Trang dang ky, dang nhap */
+
+/* ===== Trang dang ky, dang nhap ===== */
 .auth-card {
     width: 100%;
     max-width: 440px;
@@ -57,7 +66,8 @@
     margin: 0 0 20px;
     text-align: center;
 }
-/*O nhap van ban ben trang dang ky lam nha to chuc*/
+
+/* ===== O nhap van ban (dang ky lam nha to chuc) ===== */
 .form-textarea {
     width: 100%;
     max-width: 600px;
@@ -67,8 +77,74 @@
     font-size: 14px;
     resize: vertical;
 }
-
 .form-textarea:focus {
     outline: none;
     border-color: rgb(76, 142, 183);
+}
+
+/* ===== iPad ngang & laptop nhỏ (≤ 1024px) ===== */
+@media (max-width: 1024px) {
+    .account-info {
+        max-width: 560px;
+    }
+}
+
+/* ===== iPad dọc (≤ 768px) ===== */
+@media (max-width: 768px) {
+    .main-content {
+        padding: 16px 12px;
+    }
+    .account-info {
+        max-width: 100%;
+        padding: 18px;
+    }
+    .auth-card {
+        max-width: 480px;
+        padding: 24px 22px 20px;
+    }
+    .form-textarea {
+        max-width: 100%;
+    }
+}
+
+/* ===== Điện thoại (≤ 480px) ===== */
+@media (max-width: 480px) {
+    .main-content {
+        padding: 12px 8px;
+    }
+    .account-info {
+        padding: 14px;
+        border-radius: 6px;
+    }
+    .auth-card {
+        padding: 20px 16px 16px;
+        border-radius: 10px;
+    }
+    .auth-title {
+        font-size: 22px;
+        margin-bottom: 16px;
+    }
+    .account-title {
+        margin-bottom: 14px;
+    }
+
+    /* Nút full chiều ngang, dễ bấm bằng ngón tay */
+    .form-button {
+        justify-content: stretch;
+    }
+    #update-info, #update-password {
+        width: 100%;
+        padding: 12px 20px;
+    }
+
+    /* 16px để iPhone không tự zoom khi bấm vào ô nhập */
+    .form-textarea,
+    input[type="text"],
+    input[type="email"],
+    input[type="password"],
+    input[type="tel"],
+    input[type="date"],
+    select {
+        font-size: 16px;
+    }
 }
