@@ -30,7 +30,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && csrfValid()) {
                 // 4. Nếu duyệt thì đổi vai trò (chỉ với user thường)
                 if ($trangThai === 'da_duyet') {
                     $db->prepare("UPDATE nguoidung SET VaiTro = 'organizer' WHERE ID = ? AND VaiTro = 'user'")
-                    ->execute([$row['ID_NguoiDung']]);
+                       ->execute([$row['ID_NguoiDung']]);
 
                     guiThongBao($db, (int)$row['ID_NguoiDung'],
                         'Yêu cầu làm nhà tổ chức đã được duyệt',
@@ -46,14 +46,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && csrfValid()) {
             $db->commit();
         } catch (Throwable $ex) {
             if ($db->inTransaction()) $db->rollBack();
-                exit('Loi xu ly yeu cau: ' . $ex->getMessage() . ' (dong ' . $ex->getLine() . ' - ' . basename($ex->getFile()) . ')');
+            // Khi chạy thật nên đổi thành: error_log($ex->getMessage()); exit('Có lỗi xảy ra, vui lòng thử lại.');
+            exit('Loi xu ly yeu cau: ' . $ex->getMessage() . ' (dong ' . $ex->getLine() . ' - ' . basename($ex->getFile()) . ')');
         }
     }
     header('Location: ' . BASE_URL . '/pages/admin/duyetdoivaitro.php');
     exit;
 }
 
-$ds = $db->query("
+$dsYeuCau = $db->query("
     SELECT y.*, n.HoTen, n.Email
     FROM yeucau_organizer y
     JOIN nguoidung n ON n.ID = y.ID_NguoiDung
@@ -63,42 +64,57 @@ $ds = $db->query("
 ?>
 <!DOCTYPE html>
 <html lang="vi">
-<head><meta charset="UTF-8">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Duyệt nhà tổ chức</title>
 <link rel="stylesheet" href="../../assets/css/style.css">
-<link rel="stylesheet" href="../../pages/taikhoan/taikhoan.css">
+<link rel="stylesheet" href="../../pages/admin/admin.css">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css">
 </head>
 <body>
-    <?php require __DIR__ . '/../../components/top.php';
-    require __DIR__ . '/../../components/header.php'; ?>
-    <main class="main-content"> 
-        <h2>Yêu cầu làm nhà tổ chức đang chờ duyệt</h2>
-        <?php if (!$ds): ?>
-            <p>Hiện không có yêu cầu nào.</p>
-        <?php else: ?>
-        <table border="1" cellpadding="6">
-            <tr><th>Người dùng</th><th>Email</th><th>Giới thiệu và lý do</th><th>Ngày gửi</th><th>Xử lý</th></tr>
-            <?php foreach ($ds as $r): ?>
-            <tr>
-            <td><?= e($r['HoTen']) ?></td>
-            <td><?= e($r['Email']) ?></td>
-            <td><?= nl2br(e($r['LyDo'])) ?></td>
-            <td><?= e($r['NgayGui']) ?></td>
-            <td>
-                <form method="post">
-                <?= csrfField() ?>
-                <input type="hidden" name="id" value="<?= (int)$r['ID'] ?>">
-                <button name="hanh_dong" value="duyet">Duyệt</button>
-                <button name="hanh_dong" value="tu_choi">Từ chối</button>
-                </form>
-            </td>
-            </tr>
-            <?php endforeach; ?>
-        </table>
-        <?php endif; ?>
-    </main>
-    <script src="../../assets/js/components.js"></script>
-    <?php require __DIR__ . '/../../components/footer.php'; ?>
+<?php require __DIR__ . '/../../components/top.php'; ?>
+<?php require __DIR__ . '/../../components/header.php'; ?>
+
+<main class="admin-page">
+  <h1>Duyệt nhà tổ chức</h1>
+  <p class="page-sub">Các yêu cầu làm nhà tổ chức đang chờ xử lý (<?= count($dsYeuCau) ?>)</p>
+
+  <?php if (!$dsYeuCau): ?>
+    <p class="alert alert-warning">Hiện không có yêu cầu nào.</p>
+  <?php else: ?>
+  <div class="table-wrap">
+    <table class="table-stack">
+      <tr>
+        <th>Người dùng</th><th>Email</th><th>Giới thiệu và lý do</th><th>Ngày gửi</th><th>Xử lý</th>
+      </tr>
+      <?php foreach ($dsYeuCau as $r): ?>
+      <tr>
+        <td data-label="Người dùng"><?= e($r['HoTen']) ?></td>
+        <td data-label="Email"><?= e($r['Email']) ?></td>
+        <td data-label="Lý do" class="cell-reason"><?= nl2br(e($r['LyDo'])) ?></td>
+        <td data-label="Ngày gửi"><?= e($r['NgayGui']) ?></td>
+        <td data-label="Xử lý">
+          <form method="post" class="inline-actions">
+            <?= csrfField() ?>
+            <input type="hidden" name="id" value="<?= (int)$r['ID'] ?>">
+            <button name="hanh_dong" value="duyet" class="btn btn-sm btn-success">
+              <i class="fa-solid fa-check"></i> Duyệt
+            </button>
+            <button name="hanh_dong" value="tu_choi" class="btn btn-sm btn-danger"
+                    onclick="return confirm('Từ chối yêu cầu này?');">
+              <i class="fa-solid fa-xmark"></i> Từ chối
+            </button>
+          </form>
+        </td>
+      </tr>
+      <?php endforeach; ?>
+    </table>
+  </div>
+  <?php endif; ?>
+</main>
+
+<?php require __DIR__ . '/../../components/footer.php'; ?>
+<script src="../../assets/js/components.js"></script>
 </body>
 </html>
