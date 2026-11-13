@@ -104,6 +104,15 @@ function guiThongBao(PDO $db, int $userId, string $tieuDe, string $noiDung, stri
        ->execute([$userId, $tieuDe, $noiDung, $loai]);
 }
 
+/* Gui thong bao cho TAT CA admin dang hoat dong */
+function guiThongBaoAdmin(PDO $db, string $tieuDe, string $noiDung, string $loai): void {
+    $dsAdmin = $db->query("SELECT ID FROM nguoidung WHERE VaiTro = 'admin' AND TrangThai = 'hoat_dong'")
+                  ->fetchAll(PDO::FETCH_COLUMN);
+    foreach ($dsAdmin as $idAdmin) {
+        guiThongBao($db, (int)$idAdmin, $tieuDe, $noiDung, $loai);
+    }
+}
+
 function demThongBaoChuaDoc(): int {
     if (!isLoggedIn()) return 0;
     $st = getDB()->prepare("SELECT COUNT(*) FROM thongbao WHERE ID_NguoiDung = ? AND DaDoc = 0");

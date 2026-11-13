@@ -77,7 +77,7 @@ require __DIR__ . '/../../components/header.php';
         </div>
 
         <div class="form-button">
-            <button class="btn" type="submit">Đăng ký</button>
+            <button class="btn" id="register-button" type="submit">Đăng ký</button>
         </div>
         <p class="form-link">Đã có tài khoản? <a href="dangnhap.php">Đăng nhập</a></p>
     </form>

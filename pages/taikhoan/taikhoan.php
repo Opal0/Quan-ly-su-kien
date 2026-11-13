@@ -41,6 +41,7 @@ $pageTitle = 'Tài khoản | Musicforlife';
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title><?= e($pageTitle) ?></title>
     <link rel="stylesheet" href="<?= BASE_URL ?>/assets/css/style.css">
+    <link rel="stylesheet" href="<?= BASE_URL ?>/pages/taikhoan/taikhoan.css?v=2">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css">
     <link rel="stylesheet" href="<?= BASE_URL ?>/pages/taikhoan/taikhoan.css?v=2">
 </head>

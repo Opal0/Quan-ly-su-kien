@@ -66,7 +66,7 @@ require __DIR__ . '/../../components/header.php';
 
         <p class="form-link" style="text-align:right;margin:0"><a href="quenmatkhau.php">Quên mật khẩu?</a></p>
         <div class="form-button">
-            <button class="btn" type="submit">Đăng nhập</button>
+            <button class="btn" id="login-button" type="submit">Đăng nhập</button>
         </div>
         <p class="form-link">Chưa có tài khoản? <a href="dangky.php">Đăng ký</a></p>
     </form>
