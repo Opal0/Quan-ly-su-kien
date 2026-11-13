@@ -21,6 +21,7 @@ $db->prepare("UPDATE thongbao SET DaDoc = 1 WHERE ID_NguoiDung = ? AND DaDoc = 0
     <title>Thông báo</title>
 
     <link rel="stylesheet" href="<?= BASE_URL ?>/assets/css/style.css">
+    <link rel="stylesheet" href="<?= BASE_URL ?>/pages/taikhoan/taikhoan.css">
 </head>
 <body>
 
@@ -29,7 +30,7 @@ $db->prepare("UPDATE thongbao SET DaDoc = 1 WHERE ID_NguoiDung = ? AND DaDoc = 0
     require ROOT_PATH . '/components/header.php';
     ?>
 
-    <main>
+    <main class="main-content">
         <h2>Thông báo</h2>
 
         <?php if (!$ds): ?>
