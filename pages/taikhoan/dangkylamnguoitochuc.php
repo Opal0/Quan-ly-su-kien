@@ -26,11 +26,11 @@ if (currentRole() === 'user' && $_SERVER['REQUEST_METHOD'] === 'POST') {
                 $st = $db->prepare("INSERT INTO yeucau_organizer (ID_NguoiDung, LyDo) VALUES (?, ?)");
                 $st->execute([$nguoiGui['id'], $lyDo]);
 
-                // Thông báo cho tất cả admin
+                // Thông báo cho tất cả admin (chữ hiển thị được viết trong thongbao.php)
                 guiThongBaoAdmin(
                     $db,
-                    'Có yêu cầu làm nhà tổ chức đang chờ duyệt',
-                    $nguoiGui['name'] . ' vừa gửi yêu cầu trở thành nhà tổ chức. Vào mục "Duyệt nhà tổ chức" để xử lý.',
+                    'Yêu cầu làm nhà tổ chức',   // tiêu đề tạm, thongbao.php sẽ tự thay
+                    $nguoiGui['name'],           // chỉ lưu tên người gửi
                     'yeucau_organizer'
                 );
 
@@ -49,6 +49,9 @@ if (currentRole() === 'user' && $_SERVER['REQUEST_METHOD'] === 'POST') {
 $st = $db->prepare("SELECT * FROM yeucau_organizer WHERE ID_NguoiDung = ? ORDER BY ID DESC LIMIT 1");
 $st->execute([$nguoiGui['id']]);
 $ycGanNhat = $st->fetch();
+
+// Vừa gửi xong thì coi như đang chờ duyệt để hiện đúng trạng thái
+$dangCho = $ok !== '' || ($ycGanNhat && $ycGanNhat['TrangThai'] === 'cho_duyet');
 ?>
 <!DOCTYPE html>
 <html lang="vi">
@@ -65,7 +68,7 @@ $ycGanNhat = $st->fetch();
 <?php require __DIR__ . '/../../components/header.php'; ?>
 
 <main class="main-content">
-    <h2>Đăng ký làm nhà tổ chức sự kiện</h2>
+    <h2 class="main-title">Đăng ký làm nhà tổ chức sự kiện</h2>
 
     <?php if ($ok):  ?><p style="color:green"><?= e($ok) ?></p><?php endif; ?>
     <?php if ($loi): ?><p style="color:red"><?= e($loi) ?></p><?php endif; ?>
@@ -73,16 +76,18 @@ $ycGanNhat = $st->fetch();
     <?php if (currentRole() !== 'user'): ?>
         <p>Tài khoản của bạn hiện là <b><?= e(currentRole()) ?></b>, không cần đăng ký thêm.</p>
 
-    <?php elseif ($ycGanNhat && $ycGanNhat['TrangThai'] === 'cho_duyet'): ?>
-        <p>Yêu cầu gửi lúc <?= e($ycGanNhat['NgayGui']) ?> đang <b>chờ admin duyệt</b>.</p>
+    <?php elseif ($dangCho): ?>
+        <?php if ($ycGanNhat): ?>
+            <p>Yêu cầu gửi lúc <?= e($ycGanNhat['NgayGui']) ?> đang <b>chờ admin duyệt</b>.</p>
+        <?php endif; ?>
 
     <?php else: ?>
         <form method="post">
             <?= csrfField() ?>
-            <label for="ly_do">Giới thiệu về bạn / tổ chức và lý do muốn tổ chức sự kiện</label><br>
+            <label for="ly_do" style="color: white;">Giới thiệu về bạn / tổ chức và lý do muốn tổ chức sự kiện</label><br>
             <textarea id="ly_do" class="form-textarea" name="ly_do" rows="10" required></textarea>
             <br>
-            <button type="submit">Gửi yêu cầu</button>
+            <button id="organizer-button" type="submit">Gửi yêu cầu</button>
         </form>
     <?php endif; ?>
 </main>
