@@ -73,7 +73,7 @@ body {
   white-space: nowrap;
 }
 .tabs a:hover { background: #e5e7eb; }
-.tabs a.active { background: #4f46e5; color: #ffffff; }
+.tabs a.active { background: rgb(76, 142, 183); color: #ffffff; }
 
 /* ---------- Form tìm kiếm ---------- */
 .search-form {
@@ -92,7 +92,7 @@ body {
 }
 .search-form input[name="q"]:focus {
   outline: none;
-  border-color: #4f46e5;
+  border-color:  rgb(76, 142, 183);
   box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.15);
 }
 
@@ -104,7 +104,7 @@ body {
   padding: 9px 18px;
   border: none;
   border-radius: 8px;
-  background: #4f46e5;
+  background:  rgb(76, 142, 183);
   color: #ffffff;
   font-size: 0.95rem;
   font-weight: 600;
@@ -224,8 +224,7 @@ body {
 }
 .pagination a:hover { background: #f3f4f6; }
 .pagination a.active {
-  background: #4f46e5;
-  border-color: #4f46e5;
+  background:  rgb(76, 142, 183);
   color: #ffffff;
 }
 
