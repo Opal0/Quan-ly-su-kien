@@ -4,12 +4,13 @@ require_once ROOT_PATH . '/includes/auth.php';
 
 
 $pdo = getDB();
+requireLogin();
 
 // Xử lý khi người dùng bấm xác nhận đặt vé.
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     // Bắt buộc đăng nhập.
-    requireLogin();
+    // requireLogin();
 
     // Kiểm tra CSRF.
     if (!csrfValid()) {
