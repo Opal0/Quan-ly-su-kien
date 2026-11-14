@@ -552,8 +552,6 @@ $initialTickets = $selectedEventId > 0
 
                     <p>
                         Vui lòng kiểm tra lại thông tin trước khi xác nhận.
-                        Đây hiện là giao diện demo; việc lưu đăng ký và
-                        thanh toán cần được tích hợp ở bước backend.
                     </p>
                 </div>
 
