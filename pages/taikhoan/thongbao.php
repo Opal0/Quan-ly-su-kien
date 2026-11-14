@@ -14,9 +14,7 @@ $db->prepare("UPDATE thongbao SET DaDoc = 1 WHERE ID_NguoiDung = ? AND DaDoc = 0
    ->execute([$uid]);
 
 /**
- * Trả về [tiêu đề, nội dung] để hiển thị.
- * Loại thông báo nào cần tự viết chữ thì thêm vào đây.
- */
+ * Trả về [tiêu đề, nội dung] để hiển thị.*/
 function noiDungThongBao(array $tb): array
 {
     switch ($tb['LoaiThongBao']) {
