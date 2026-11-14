@@ -40,10 +40,8 @@ $pageTitle = 'Tài khoản | Musicforlife';
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title><?= e($pageTitle) ?></title>
-    <link rel="stylesheet" href="<?= BASE_URL ?>/assets/css/style.css">
     <link rel="stylesheet" href="<?= BASE_URL ?>/pages/taikhoan/taikhoan.css?v=2">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css">
-    <link rel="stylesheet" href="<?= BASE_URL ?>/pages/taikhoan/taikhoan.css?v=2">
 </head>
 <body>
     <?php
@@ -71,7 +69,7 @@ $pageTitle = 'Tài khoản | Musicforlife';
 
             <div class="form-row">
                 <label>Số điện thoại</label>
-                <input type="text" value="<?= e($taiKhoan['SoDienThoai']) ?>" readonly>
+                <input type="text" value="<?= !empty($taiKhoan['SoDienThoai']) ? e($taiKhoan['SoDienThoai']) : 'Chưa cập nhật' ?>" readonly>
             </div>
 
             <div class="form-button">
