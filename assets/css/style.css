@@ -140,8 +140,9 @@ header {
 .page-footer__logo img {
     margin-top: 10px;
     width: 120px;
-    height: 80px;
+    height: 120px;
     object-fit: contain;
+    border-radius: 50%;
 }
 
 /* FOOTER COLUMNS */
