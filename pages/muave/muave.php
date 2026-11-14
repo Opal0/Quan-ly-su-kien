@@ -2,15 +2,16 @@
 require_once __DIR__ . '/../../config/app.php';
 require_once ROOT_PATH . '/includes/auth.php';
 
-
+if(currentRole() === 'guest') {
+        echo "<script>
+            alert('Vui lòng đăng nhập để tiếp tục!');
+            window.location.href = '" . BASE_URL . "/pages/taikhoan/dangnhap.php';
+        </script>";
+}
 $pdo = getDB();
-requireLogin();
 
 // Xử lý khi người dùng bấm xác nhận đặt vé.
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-
-    // Bắt buộc đăng nhập.
-    // requireLogin();
 
     // Kiểm tra CSRF.
     if (!csrfValid()) {
