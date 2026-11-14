@@ -25,7 +25,7 @@ $sql = "SELECT s.ID                                   AS id,
                s.AnhSuKien                            AS image,
                s.SoLuongToiDa                         AS capacity,
                s.TrangThai                            AS db_status,
-               COUNT(r.ID)                            AS registered
+               COALESCE(SUM(COALESCE(r.SoLuong, 1)), 0) AS registered
         FROM sukien s
         JOIN danhmuc d ON d.ID = s.ID_DanhMuc
         LEFT JOIN dangkysukien r ON r.ID_SuKien = s.ID AND r.TrangThai = 'da_dang_ky'
@@ -59,7 +59,8 @@ foreach ($events as &$ev) {
     if ($ev['db_status'] === 'da_ket_thuc' || $ev['end_date'] < $today) $ev['status'] = 'past';
     elseif ($ev['date'] <= $today)                                       $ev['status'] = 'today';
     else                                                                 $ev['status'] = 'upcoming';
-    $ev['full'] = $ev['registered'] >= $ev['capacity'];
+    $ev['full'] = $ev['capacity'] > 0
+    && $ev['registered'] >= $ev['capacity'];
 }
 unset($ev);
 
@@ -85,9 +86,14 @@ unset($_SESSION['flash']);
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $back   = strtok($_SERVER['REQUEST_URI'], '#') . '#danh-sach';
-    $action = ($_POST['action'] ?? 'register') === 'cancel' ? 'cancel' : 'register';
-    $token  = $_POST['csrf_token'] ?? '';
-    $id     = (int)($_POST['event_id'] ?? 0);
+    // Đăng ký mới phải đi qua trang Mua vé và backend xử lý chung.
+if ($action === 'register') {
+    header(
+        'Location: ' . BASE_URL .
+        '/pages/muave/muave.php?event_id=' . $id
+    );
+    exit;
+}
 
     $target = null;
     foreach ($events as $ev) { if ($ev['id'] === $id) { $target = $ev; break; } }
