@@ -14,9 +14,7 @@ $db->prepare("UPDATE thongbao SET DaDoc = 1 WHERE ID_NguoiDung = ? AND DaDoc = 0
    ->execute([$uid]);
 
 /**
- * Trả về [tiêu đề, nội dung] để hiển thị.
- * Loại thông báo nào cần tự viết chữ thì thêm vào đây.
- */
+ * Trả về [tiêu đề, nội dung] để hiển thị.*/
 function noiDungThongBao(array $tb): array
 {
     switch ($tb['LoaiThongBao']) {
@@ -51,7 +49,7 @@ function noiDungThongBao(array $tb): array
     ?>
 
     <main class="main-content">
-        <h2>Thông báo</h2>
+        <h2 style="text-align: center; color: white;">Thông báo</h2>
 
         <?php if (!$dsThongBao): ?>
             <p>Bạn chưa có thông báo nào.</p>
@@ -59,7 +57,7 @@ function noiDungThongBao(array $tb): array
 
         <?php foreach ($dsThongBao as $tb): ?>
             <?php [$tieuDe, $noiDung] = noiDungThongBao($tb); ?>
-            <div style="border:1px solid #ddd; padding:10px; margin-bottom:8px; <?= !$tb['DaDoc'] ? 'background:#fff8e1;' : '' ?>">
+            <div style="background-color: #f9f9f9; padding:10px; margin-bottom:8px; <?= !$tb['DaDoc'] ? 'background:#fff8e1;' : '' ?>">
                 <b><?= e($tieuDe) ?></b>
                 <?php if (!$tb['DaDoc']): ?><span style="color:red">(mới)</span><?php endif; ?>
                 <p><?= nl2br(e($noiDung)) ?></p>
@@ -70,7 +68,7 @@ function noiDungThongBao(array $tb): array
                 <?php endif; ?>
 
                 <?php if ($tb['LoaiThongBao'] === 'yeucau_organizer' && isAdmin()): ?>
-                    <p><a href="<?= BASE_URL ?>/pages/admin/duyetdoivaitro.php">Đi tới trang duyệt yêu cầu </a></p>
+                    <p><a href="<?= BASE_URL ?>/pages/admin/duyetdoivaitro.php">Đi tới trang duyệt người tổ chức </a></p>
                 <?php endif; ?>
             </div>
         <?php endforeach; ?>
