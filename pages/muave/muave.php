@@ -547,7 +547,6 @@ $initialTickets = $selectedEventId > 0
             </div>
         </section>
 
-
         <!-- KHUNG ĐẶT VÉ -->
         <section class="booking-card">
 
@@ -564,7 +563,11 @@ $initialTickets = $selectedEventId > 0
         <p><?= muave_escape($_GET['error']) ?></p>
     </div>
 <?php endif; ?>
-            <form action="" method="post" id="bookingForm">
+            <form
+    action="<?= BASE_URL ?>/backend/registrations/register.php"
+    method="post"
+    id="bookingForm"
+>
 
     <?= csrfField() ?>
 
@@ -605,7 +608,6 @@ $initialTickets = $selectedEventId > 0
 
                     </select>
                 </div>
-
 
                 <!-- CHỌN LOẠI VÉ THEO SỰ KIỆN -->
                 <div class="form-group">
@@ -658,7 +660,6 @@ $initialTickets = $selectedEventId > 0
 
                 </div>
 
-
                 <!-- SỐ LƯỢNG -->
                 <div class="form-group">
 
@@ -681,7 +682,6 @@ $initialTickets = $selectedEventId > 0
                     </small>
 
                 </div>
-
 
                 <!-- THÔNG TIN NGƯỜI MUA -->
                 <div class="form-divider">
@@ -713,7 +713,6 @@ $initialTickets = $selectedEventId > 0
                     <label for="email">
                         Email <span>*</span>
                     </label>
-
                     <input
                         type="email"
                         id="email"
@@ -722,7 +721,6 @@ $initialTickets = $selectedEventId > 0
                         placeholder="name@example.com"
                         required
                     >
-
                 </div>
 
                 <div class="form-group">
@@ -741,7 +739,6 @@ $initialTickets = $selectedEventId > 0
                     >
 
                 </div>
-
 
                 <!-- TỔNG TIỀN -->
                 <div class="ticket-total">
@@ -763,18 +760,14 @@ $initialTickets = $selectedEventId > 0
 
                 </div>
 
-
                 <!-- GHI CHÚ -->
                 <div class="ticket-note">
                     <i class="fa-solid fa-circle-info"></i>
 
                     <p>
                         Vui lòng kiểm tra lại thông tin trước khi xác nhận.
-                        Đây hiện là giao diện demo; việc lưu đăng ký và
-                        thanh toán cần được tích hợp ở bước backend.
                     </p>
                 </div>
-
 
                 <!-- NÚT ĐẶT VÉ -->
                 <button
@@ -799,7 +792,6 @@ $initialTickets = $selectedEventId > 0
     </div>
 </main>
 
-
 <!-- DỮ LIỆU SỰ KIỆN CHO JAVASCRIPT -->
 <script type="application/json" id="eventData"><?=
     json_encode(
@@ -811,12 +803,8 @@ $initialTickets = $selectedEventId > 0
         JSON_HEX_AMP
     )
 ?></script>
-
-
 <?php include ROOT_PATH . '/components/footer.php'; ?>
-
 <script src="../../assets/js/components.js"></script>
 <script src="muave.js?v=5"></script>
-
 </body>
 </html>

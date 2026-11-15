@@ -1,138 +1,244 @@
-
 <?php
 require_once __DIR__ . '/../../includes/auth.php';
 
 // Bắt buộc đăng nhập
 requireLogin();
 
-// Chỉ xử lý khi form gửi bằng POST
+// Chỉ xử lý POST
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     header('Location: ' . BASE_URL . '/pages/sukien/sukien.php');
     exit;
 }
 
-// Kiểm tra CSRF theo chuẩn chung của nhóm
+// Kiểm tra CSRF
 if (!csrfValid()) {
     die('Yêu cầu không hợp lệ. Vui lòng tải lại trang và thử lại.');
 }
 
-$id_nguoi_dung = (int) $_SESSION['user_id'];
-$id_su_kien = (int) ($_POST['ID_SuKien'] ?? 0);
-
-if ($id_su_kien <= 0) {
-    header(
-        'Location: ' . BASE_URL . '/pages/taikhoan/ve_cua_toi.php?error=' .
-        urlencode('Sự kiện không hợp lệ.')
-    );
-    exit;
-}
+$userId = (int) $_SESSION['user_id'];
+$eventId = (int) ($_POST['ID_SuKien'] ?? 0);
+$ticketId = (int) ($_POST['ID_LoaiVe'] ?? 0);
+$quantity = (int) ($_POST['SoLuong'] ?? 1);
 
 $db = getDB();
 
 try {
+    if ($eventId <= 0) {
+        throw new Exception('Sự kiện không hợp lệ.');
+    }
+
+    if ($quantity < 1 || $quantity > 10) {
+        throw new Exception('Số lượng vé phải từ 1 đến 10.');
+    }
+
     $db->beginTransaction();
 
-    // Khóa dòng sự kiện để tránh đăng ký vượt số lượng
+    // 1. Khóa và kiểm tra sự kiện
     $stmt = $db->prepare("
-        SELECT ID, ThoiGianBatDau, SoLuongToiDa, TrangThai
+        SELECT ID, TenSuKien, ThoiGianBatDau,
+               SoLuongToiDa, TrangThai
         FROM sukien
         WHERE ID = ?
         FOR UPDATE
     ");
-    $stmt->execute([$id_su_kien]);
-    $su_kien = $stmt->fetch();
+    $stmt->execute([$eventId]);
+    $event = $stmt->fetch(PDO::FETCH_ASSOC);
 
-    if (!$su_kien) {
+    if (!$event) {
         throw new Exception('Không tìm thấy sự kiện.');
     }
 
-    if ($su_kien['TrangThai'] === 'da_huy') {
-        throw new Exception('Sự kiện đã bị hủy.');
+    if (in_array($event['TrangThai'], ['da_huy', 'da_ket_thuc'], true)) {
+        throw new Exception('Sự kiện không còn nhận đăng ký.');
     }
 
-    if ($su_kien['TrangThai'] === 'da_ket_thuc') {
-        throw new Exception('Sự kiện đã kết thúc.');
-    }
-
-    if (strtotime($su_kien['ThoiGianBatDau']) <= time()) {
+    if (strtotime($event['ThoiGianBatDau']) <= time()) {
         throw new Exception('Sự kiện đã bắt đầu, không thể đăng ký.');
     }
 
-    // Kiểm tra người dùng đã đăng ký sự kiện này chưa
+    // 2. Kiểm tra loại vé
+    $ticket = null;
+
+    if ($ticketId > 0) {
+        $stmt = $db->prepare("
+            SELECT ID, ID_SuKien, TenLoaiVe,
+                   GiaVe, SoLuongToiDa
+            FROM loaive
+            WHERE ID = ?
+              AND ID_SuKien = ?
+              AND TrangThai = 1
+            FOR UPDATE
+        ");
+        $stmt->execute([$ticketId, $eventId]);
+        $ticket = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        if (!$ticket) {
+            throw new Exception('Loại vé không hợp lệ hoặc đã ngừng bán.');
+        }
+
+        $unitPrice = (float) $ticket['GiaVe'];
+
+    } else {
+        // Không chọn loại vé chỉ được phép nếu sự kiện
+        // chưa thiết lập loại vé đang hoạt động.
+        $stmt = $db->prepare("
+            SELECT COUNT(*)
+            FROM loaive
+            WHERE ID_SuKien = ?
+              AND TrangThai = 1
+        ");
+        $stmt->execute([$eventId]);
+
+        if ((int) $stmt->fetchColumn() > 0) {
+            throw new Exception('Vui lòng chọn loại vé của sự kiện.');
+        }
+
+        // Đăng ký miễn phí không có loại vé
+        $quantity = 1;
+        $unitPrice = 0;
+    }
+
+    // 3. Kiểm tra đăng ký cũ của người dùng
     $stmt = $db->prepare("
         SELECT ID, TrangThai
         FROM dangkysukien
         WHERE ID_NguoiDung = ?
           AND ID_SuKien = ?
         LIMIT 1
+        FOR UPDATE
     ");
-    $stmt->execute([$id_nguoi_dung, $id_su_kien]);
-    $dang_ky_cu = $stmt->fetch();
+    $stmt->execute([$userId, $eventId]);
+    $oldBooking = $stmt->fetch(PDO::FETCH_ASSOC);
 
-    if ($dang_ky_cu && $dang_ky_cu['TrangThai'] === 'da_dang_ky') {
+    if ($oldBooking && $oldBooking['TrangThai'] === 'da_dang_ky') {
         throw new Exception('Bạn đã đăng ký sự kiện này rồi.');
     }
 
-    // Đếm số lượt đăng ký còn hiệu lực
+    // 4. Kiểm tra số lượng còn lại của loại vé
+    if ($ticket) {
+        $stmt = $db->prepare("
+            SELECT COALESCE(SUM(SoLuong), 0)
+            FROM dangkysukien
+            WHERE ID_LoaiVe = ?
+              AND TrangThai = 'da_dang_ky'
+        ");
+        $stmt->execute([$ticketId]);
+        $soldTicket = (int) $stmt->fetchColumn();
+
+        $ticketLimit = (int) $ticket['SoLuongToiDa'];
+
+        if ($ticketLimit > 0 && $soldTicket + $quantity > $ticketLimit) {
+            throw new Exception('Loại vé này không còn đủ số lượng.');
+        }
+    }
+
+    // 5. Kiểm tra tổng sức chứa sự kiện
     $stmt = $db->prepare("
-        SELECT COUNT(*)
+        SELECT COALESCE(SUM(SoLuong), 0)
         FROM dangkysukien
         WHERE ID_SuKien = ?
           AND TrangThai = 'da_dang_ky'
     ");
-    $stmt->execute([$id_su_kien]);
-    $so_nguoi_da_dang_ky = (int) $stmt->fetchColumn();
+    $stmt->execute([$eventId]);
+    $soldEvent = (int) $stmt->fetchColumn();
 
-    // Kiểm tra số lượng chỗ còn lại
-    if ($so_nguoi_da_dang_ky >= (int) $su_kien['SoLuongToiDa']) {
-        throw new Exception('Sự kiện đã hết chỗ.');
+    $eventLimit = (int) $event['SoLuongToiDa'];
+
+    if ($eventLimit > 0 && $soldEvent + $quantity > $eventLimit) {
+        throw new Exception('Sự kiện không còn đủ chỗ.');
     }
 
-    // Tạo mã vé mới
-    $ma_ve = bin2hex(random_bytes(16));
+    // 6. Tính tiền tại server
+    $totalPrice = $unitPrice * $quantity;
+    $ticketCode = strtoupper(bin2hex(random_bytes(8)));
 
-    if ($dang_ky_cu) {
-        // Nếu trước đây đã hủy thì cập nhật lại đăng ký
+    // 7. Cập nhật bản ghi cũ hoặc tạo bản ghi mới
+    if ($oldBooking) {
         $stmt = $db->prepare("
             UPDATE dangkysukien
-            SET NgayDangKy = NOW(),
+            SET
+                NgayDangKy = NOW(),
                 TrangThai = 'da_dang_ky',
                 MaVe = ?,
+                ID_LoaiVe = ?,
+                SoLuong = ?,
+                DonGia = ?,
+                ThanhTien = ?,
                 TrangThaiCheckIn = 'chua_checkin',
                 ThoiGianCheckIn = NULL
             WHERE ID = ?
         ");
-        $stmt->execute([$ma_ve, $dang_ky_cu['ID']]);
+
+        $stmt->execute([
+            $ticketCode,
+            $ticket ? $ticketId : null,
+            $quantity,
+            $unitPrice,
+            $totalPrice,
+            $oldBooking['ID']
+        ]);
 
     } else {
-        // Nếu đăng ký lần đầu thì thêm bản ghi mới
         $stmt = $db->prepare("
-            INSERT INTO dangkysukien
-                (ID_NguoiDung, ID_SuKien, NgayDangKy,
-                 TrangThai, MaVe, TrangThaiCheckIn)
-            VALUES (?, ?, NOW(), 'da_dang_ky', ?, 'chua_checkin')
+            INSERT INTO dangkysukien (
+                ID_NguoiDung,
+                ID_SuKien,
+                ID_LoaiVe,
+                NgayDangKy,
+                TrangThai,
+                MaVe,
+                SoLuong,
+                DonGia,
+                ThanhTien,
+                TrangThaiCheckIn
+            )
+            VALUES (?, ?, ?, NOW(), 'da_dang_ky', ?, ?, ?, ?, 'chua_checkin')
         ");
+
         $stmt->execute([
-            $id_nguoi_dung,
-            $id_su_kien,
-            $ma_ve
+            $userId,
+            $eventId,
+            $ticket ? $ticketId : null,
+            $ticketCode,
+            $quantity,
+            $unitPrice,
+            $totalPrice
         ]);
     }
 
     $db->commit();
 
-    header('Location: ' . BASE_URL . '/pages/taikhoan/ve_cua_toi.php?registered=1');
+    // 8. Chuyển đến trang Vé của tôi
+    $result = $ticket ? 'purchased=1' : 'registered=1';
+
+    header(
+        'Location: ' . BASE_URL .
+        '/pages/taikhoan/ve_cua_toi.php?' . $result
+    );
     exit;
 
-} catch (Exception $e) {
+} catch (Throwable $e) {
 
     if ($db->inTransaction()) {
         $db->rollBack();
     }
 
-    header(
-    'Location: ' . BASE_URL . '/pages/taikhoan/ve_cua_toi.php?error=' .
-    urlencode($e->getMessage())
-);
+    error_log('Đăng ký / đặt vé: ' . $e->getMessage());
+
+    $error = urlencode($e->getMessage());
+
+    if ($ticketId > 0) {
+        header(
+            'Location: ' . BASE_URL .
+            '/pages/muave/muave.php?event_id=' . $eventId .
+            '&error=' . $error
+        );
+    } else {
+        header(
+            'Location: ' . BASE_URL .
+            '/pages/taikhoan/ve_cua_toi.php?error=' . $error
+        );
+    }
+
     exit;
 }
