@@ -1,0 +1,429 @@
+/* =========================================================
+   sukien.css — Trang Sự kiện
+   Mọi selector đều nằm trong .sk (hoặc có tiền tố .sk-)
+   nên không ghi đè lên style.css chung của website.
+   Ý tưởng chính: mỗi sự kiện là một tấm vé có đường xé.
+   ========================================================= */
+
+.sk {
+    --sk-ink: #1f3446;          /* chữ chính */
+    --sk-muted: #5d7183;        /* chữ phụ */
+    --sk-bg: #ffffff;           /* nền trang (trùng nền website, dùng cho lỗ xé vé) */
+    --sk-surface: #ffffff;      /* nền thẻ */
+    --sk-line: #d9e2e9;         /* viền */
+    --sk-accent: #3a7ca5;       /* nút chính, ngày (cùng tông xanh top bar/footer) */
+    --sk-accent-dark: #2c6486;
+    --sk-accent-soft: #e3eff7;
+    --sk-blue: #2c6486;         /* thẻ loại sự kiện, thanh đăng ký */
+    --sk-blue-soft: #e3eff7;
+    --sk-ok: #17784f;
+    --sk-ok-soft: #dff4e9;
+    --sk-warn: #a35a00;
+    --sk-warn-soft: #fff0d6;
+    --sk-err: #b3261e;
+    --sk-err-soft: #fde4e2;
+    --sk-radius: 14px;
+    --sk-stub: 112px;           /* bề rộng phần cuống vé */
+
+    max-width: 1120px;
+    margin: 28px auto 56px;
+    padding: 32px 20px 64px;
+    border-radius: 24px;
+    background: var(--sk-bg);   /* tấm nền sáng riêng, để chữ đọc được trên nền xanh đậm của website */
+    box-shadow: 0 20px 50px -20px rgba(0, 0, 0, .55);
+    color: var(--sk-ink);
+    font-family: "Be Vietnam Pro", "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    line-height: 1.55;
+}
+
+.sk *,
+.sk *::before,
+.sk *::after { box-sizing: border-box; }
+
+.sk :where(h1, h2, h3, p, dl, dd) { margin: 0; }
+
+.sr-only {
+    position: absolute;
+    width: 1px; height: 1px;
+    padding: 0; margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+}
+
+/* ---------- Focus bàn phím ---------- */
+.sk a:focus-visible,
+.sk button:focus-visible,
+.sk input:focus-visible {
+    outline: 3px solid var(--sk-blue);
+    outline-offset: 2px;
+}
+
+/* ---------- Thông báo ---------- */
+.sk-flash {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 20px;
+    padding: 12px 16px;
+    border-radius: 10px;
+    font-weight: 500;
+}
+.sk-flash--ok    { background: var(--sk-ok-soft);  color: var(--sk-ok); }
+.sk-flash--error { background: var(--sk-err-soft); color: var(--sk-err); }
+
+/* ---------- Nút ---------- */
+.sk-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 10px 20px;
+    border: 2px solid var(--sk-accent);
+    border-radius: 999px;
+    background: var(--sk-accent);
+    color: #fff;
+    font: inherit;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background-color .15s, border-color .15s, color .15s;
+}
+.sk-btn:hover { background: var(--sk-accent-dark); border-color: var(--sk-accent-dark); }
+
+.sk-btn--ghost {
+    background: transparent;
+    color: var(--sk-ink);
+    border-color: var(--sk-line);
+}
+.sk-btn--ghost:hover { background: var(--sk-bg); border-color: var(--sk-ink); }
+.sk-btn--ghost[disabled] {
+    color: var(--sk-muted);
+    background: var(--sk-bg);
+    border-color: var(--sk-line);
+    cursor: not-allowed;
+}
+
+.sk-btn--sm { padding: 7px 16px; font-size: .9rem; }
+
+/* ---------- Thẻ loại + trạng thái ---------- */
+.sk-tag {
+    display: inline-block;
+    padding: 2px 10px;
+    border-radius: 6px;
+    background: var(--sk-blue-soft);
+    color: var(--sk-blue);
+    font-size: .8rem;
+    font-weight: 600;
+}
+
+.sk-state {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 2px 10px;
+    border-radius: 6px;
+    background: var(--sk-line);
+    color: var(--sk-muted);
+    font-size: .8rem;
+    font-weight: 600;
+}
+.sk-state--live { background: var(--sk-ok-soft);   color: var(--sk-ok); }
+.sk-state--warn { background: var(--sk-warn-soft); color: var(--sk-warn); }
+
+.sk-meta {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    margin-top: 4px;
+    color: var(--sk-muted);
+    font-size: .95rem;
+}
+.sk-meta i { width: 16px; text-align: center; color: var(--sk-accent); }
+
+/* ---------- Hero ---------- */
+.sk-hero {
+    display: grid;
+    grid-template-columns: 1.2fr 1fr;
+    gap: 40px;
+    align-items: center;
+    margin-bottom: 48px;
+}
+
+.sk-hero__text h1 {
+    font-size: clamp(2rem, 4.5vw, 3.2rem);
+    font-weight: 800;
+    line-height: 1.1;
+    letter-spacing: -0.02em;
+}
+.sk-hero__text > p {
+    max-width: 52ch;
+    margin-top: 14px;
+    color: var(--sk-muted);
+    font-size: 1.05rem;
+}
+
+.sk-stats {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-top: 28px;
+}
+.sk-stats > div {
+    min-width: 120px;
+    padding: 12px 18px;
+    border: 1px solid var(--sk-line);
+    border-radius: 12px;
+    background: var(--sk-surface);
+}
+.sk-stats dt { color: var(--sk-muted); font-size: .85rem; }
+.sk-stats dd { font-size: 1.6rem; font-weight: 800; }
+
+/* ---------- Sự kiện nổi bật ---------- */
+.sk-feature {
+    position: relative;
+    display: flex;
+    gap: 20px;
+    padding: 24px;
+    border-radius: 20px;
+    background: var(--sk-ink);
+    color: #fff;
+    box-shadow: 0 18px 40px -18px rgba(29, 27, 58, .55);
+}
+.sk-feature__date {
+    flex: 0 0 76px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 92px;
+    border-radius: 14px;
+    background: var(--sk-accent);
+    text-align: center;
+}
+.sk-feature__date b { font-size: 2.2rem; line-height: 1; }
+.sk-feature__date span { margin-top: 4px; font-size: .85rem; font-weight: 600; }
+
+.sk-feature__body { flex: 1; min-width: 0; }
+.sk-feature__body h2 { margin: 10px 0 8px; font-size: 1.4rem; line-height: 1.25; }
+.sk-feature .sk-tag { background: rgba(255, 255, 255, .16); color: #fff; }
+.sk-feature .sk-meta { color: rgba(255, 255, 255, .8); }
+.sk-feature .sk-btn,
+.sk-feature .sk-mine { margin-top: 16px; }
+.sk-feature .sk-btn--ghost { color: #fff; border-color: rgba(255, 255, 255, .45); }
+.sk-feature .sk-btn--ghost:hover { background: rgba(255, 255, 255, .12); border-color: #fff; }
+.sk-feature .sk-btn--ghost[disabled] { color: rgba(255, 255, 255, .6); background: transparent; }
+.sk-feature .sk-state--live { background: var(--sk-ok-soft); color: var(--sk-ok); }
+
+/* ---------- Bộ lọc ---------- */
+.sk-filter {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 16px 24px;
+    align-items: center;
+    margin-bottom: 28px;
+    padding-bottom: 20px;
+    border-bottom: 1px solid var(--sk-line);
+    scroll-margin-top: 16px;
+}
+
+.sk-search {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 5px 6px 5px 40px;
+    border: 1px solid var(--sk-line);
+    border-radius: 999px;
+    background: var(--sk-surface);
+}
+.sk-search:focus-within { border-color: var(--sk-blue); }
+.sk-search > i {
+    position: absolute;
+    left: 16px;
+    color: var(--sk-muted);
+}
+.sk-search input[type="search"] {
+    flex: 1;
+    min-width: 0;
+    padding: 8px 4px;
+    border: 0;
+    background: transparent;
+    color: inherit;
+    font: inherit;
+}
+.sk-search input[type="search"]:focus-visible { outline: none; }
+
+.sk-tabs {
+    display: inline-flex;
+    padding: 4px;
+    border-radius: 999px;
+    background: var(--sk-line);
+}
+.sk-tabs a {
+    padding: 7px 16px;
+    border-radius: 999px;
+    color: var(--sk-muted);
+    font-size: .92rem;
+    font-weight: 600;
+    text-decoration: none;
+    white-space: nowrap;
+}
+.sk-tabs a:hover { color: var(--sk-ink); }
+.sk-tabs a.is-active { background: var(--sk-surface); color: var(--sk-ink); box-shadow: 0 1px 3px rgba(0, 0, 0, .12); }
+
+.sk-chips {
+    grid-column: 1 / -1;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+.sk-chips a {
+    padding: 5px 14px;
+    border: 1px solid var(--sk-line);
+    border-radius: 999px;
+    background: var(--sk-surface);
+    color: var(--sk-ink);
+    font-size: .9rem;
+    text-decoration: none;
+}
+.sk-chips a:hover { border-color: var(--sk-ink); }
+.sk-chips a.is-active { background: var(--sk-ink); border-color: var(--sk-ink); color: #fff; }
+
+/* ---------- Danh sách: mỗi sự kiện là một tấm vé ---------- */
+.sk-list {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 20px;
+}
+
+.sk-card {
+    position: relative;
+    display: grid;
+    grid-template-columns: var(--sk-stub) 1fr;
+    overflow: hidden;
+    border: 1px solid var(--sk-line);
+    border-radius: var(--sk-radius);
+}
+
+.sk-card {
+    background: var(--sk-surface);
+    transition: transform .15s, box-shadow .15s;
+}
+.sk-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 14px 28px -16px rgba(31, 52, 70, .45);
+}
+
+/* Cuống vé (bên trái) + hai lỗ tròn ở đường xé */
+.sk-card__date {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 16px 8px;
+    background: var(--sk-accent);
+    color: #fff;
+    text-align: center;
+}
+.sk-card__date b { font-size: 2.4rem; line-height: 1; font-weight: 800; }
+.sk-card__date span { margin-top: 6px; font-size: .85rem; font-weight: 600; }
+.sk-card__date::before,
+.sk-card__date::after {
+    content: "";
+    position: absolute;
+    right: -9px;
+    z-index: 1;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: var(--sk-bg);
+}
+.sk-card__date::before { top: -9px; }
+.sk-card__date::after  { bottom: -9px; }
+
+/* Màu cuống vé theo trạng thái */
+.sk-card--today .sk-card__date { background: var(--sk-ok); }
+.sk-card--past { opacity: .75; }
+.sk-card--past .sk-card__date { background: var(--sk-muted); }
+
+/* Thân vé */
+.sk-card__body {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    min-width: 0;
+    padding: 16px 18px 18px;
+    border-left: 2px dashed var(--sk-line);
+}
+.sk-card__top { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.sk-card__body h3 { margin: 10px 0 6px; font-size: 1.1rem; line-height: 1.3; }
+.sk-card__desc {
+    margin-bottom: 6px;
+    color: var(--sk-muted);
+    font-size: .92rem;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+/* Thanh số người đăng ký */
+.sk-bar {
+    align-self: stretch;
+    height: 6px;
+    margin-top: 14px;
+    border-radius: 999px;
+    background: var(--sk-line);
+    overflow: hidden;
+}
+.sk-bar span { display: block; height: 100%; border-radius: 999px; background: var(--sk-blue); }
+.sk-bar__label { margin-top: 6px; color: var(--sk-muted); font-size: .82rem; }
+
+.sk-card__body > .sk-btn,
+.sk-card__body > .sk-mine { margin-top: 14px; }
+
+/* ---------- Không có kết quả ---------- */
+.sk-empty {
+    grid-column: 1 / -1;
+    padding: 48px 16px;
+    border: 1px dashed var(--sk-line);
+    border-radius: var(--sk-radius);
+    color: var(--sk-muted);
+    text-align: center;
+}
+.sk-empty i { font-size: 2rem; }
+.sk-empty p { margin: 8px 0 16px; }
+
+/* ---------- Phân trang ---------- */
+.sk-pager { display: flex; flex-wrap: wrap; justify-content: center; gap: 6px; margin-top: 32px; }
+.sk-pager a {
+    min-width: 38px;
+    padding: 7px 12px;
+    border: 1px solid var(--sk-line);
+    border-radius: 10px;
+    background: var(--sk-surface);
+    color: var(--sk-ink);
+    text-align: center;
+    text-decoration: none;
+    font-weight: 600;
+}
+.sk-pager a:hover { border-color: var(--sk-ink); }
+.sk-pager a.is-active { background: var(--sk-ink); border-color: var(--sk-ink); color: #fff; }
+
+/* ---------- Thông báo tự ẩn (sukien.js thêm class is-hiding) ---------- */
+.sk-flash { transition: opacity .4s; }
+.sk-flash.is-hiding,
+.sk-flash.is-hidden { opacity: 0; }
+
+/* ---------- Màn hình nhỏ ---------- */
+@media (max-width: 900px) {
+    .sk-hero   { grid-template-columns: 1fr; gap: 28px; }
+    .sk-filter { grid-template-columns: 1fr; }
+    .sk-list   { grid-template-columns: 1fr; }
+}
+@media (max-width: 480px) {
+    .sk { --sk-stub: 88px; margin: 12px 8px 32px; padding: 20px 14px 48px; border-radius: 18px; }
+    .sk-feature { flex-direction: column; }
+}
