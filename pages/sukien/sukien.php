@@ -6,7 +6,7 @@ if (empty($_SESSION['csrf_token'])) {
 }
 
 // Toàn bộ xử lý dữ liệu nằm ở file riêng; file này chỉ hiển thị.
-require_once __DIR__ . '/sukien_controller.php';
+require_once __DIR__ . '/Sukien_Controller.php';
 
 /**
  * Nút hành động cho một sự kiện:
@@ -49,11 +49,13 @@ return '<a class="sk-btn" href="' .
 
     <title>Sự kiện</title>
 
-    <link rel="stylesheet" href="sukien.css">
     <link rel="stylesheet" href="../../assets/css/style.css">
 
     <link rel="stylesheet"
           href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css">
+
+    <!-- Nhúng thẳng sukien.css (không phụ thuộc đường dẫn / cache) -->
+    <style><?php readfile(__DIR__ . '/sukien.css'); ?></style>
 
     <style>
         .sk-inline { display: inline; margin: 0; }
@@ -199,6 +201,6 @@ return '<a class="sk-btn" href="' .
 
     <?php include ROOT_PATH . '/components/footer.php'; ?>
     <script src="../../assets/js/components.js"></script>
-
+    <script><?php readfile(__DIR__ . '/sukien.js'); ?></script>
 </body>
 </html>
