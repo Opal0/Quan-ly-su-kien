@@ -1,4 +1,3 @@
-
 <?php
 require_once __DIR__ . '/../../includes/auth.php';
 
@@ -263,11 +262,7 @@ require_once ROOT_PATH . '/components/header.php';
         <div class="payment-card">
 
             <div class="payment-demo">
-                <strong>Thanh toán mô phỏng</strong>
-                <p>
-                    Đây là chức năng thử nghiệm phục vụ trình diễn đồ án.
-                    Hệ thống không thực hiện giao dịch tiền thật.
-                </p>
+                <strong>Thanh toán</strong>
             </div>
 
             <h2 class="order-title">Thông tin đơn đặt vé</h2>
@@ -353,7 +348,7 @@ require_once ROOT_PATH . '/components/header.php';
                         value="that_bai"
                         class="btn-failure"
                     >
-                        Mô phỏng thanh toán thất bại
+                        Thanh toán thất bại
                     </button>
 
                 </div>
