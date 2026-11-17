@@ -29,6 +29,10 @@ try {
 
             lv.TenLoaiVe,
 
+            tt.ID AS ID_ThanhToan,
+            tt.SoTien,
+            tt.TrangThai AS TrangThaiThanhToan,
+
             s.TenSuKien,
             s.DiaDiem,
             s.ThoiGianBatDau,
@@ -41,6 +45,13 @@ try {
 
         LEFT JOIN loaive lv
             ON d.ID_LoaiVe = lv.ID
+
+        LEFT JOIN thanhtoan tt
+            ON tt.ID = (
+                SELECT MAX(tt2.ID)
+                FROM thanhtoan tt2
+                WHERE tt2.ID_DangKy = d.ID
+            )
 
         WHERE d.ID_NguoiDung = ?
 
@@ -406,6 +417,20 @@ require __DIR__ . '/../../components/header.php';
         </div>
     <?php endif; ?>
 
+    <?php if (isset($_GET['payment_success'])): ?>
+        <div class="message">
+            <i class="fa-solid fa-circle-check"></i>
+            Thanh toán thành công! Vé của bạn đã được xác nhận.
+        </div>
+    <?php endif; ?>
+
+    <?php if (isset($_GET['payment_failed'])): ?>
+        <div class="message message-error">
+            <i class="fa-solid fa-circle-xmark"></i>
+            Thanh toán thất bại. Đơn đặt vé đã được hủy.
+        </div>
+    <?php endif; ?>
+
     <?php if (isset($_GET['registered'])): ?>
         <div class="message">
             Đăng ký sự kiện thành công!
@@ -446,34 +471,66 @@ require __DIR__ . '/../../components/header.php';
                 <div class="ticket-content">
 
                     <h3><?= e($ve['TenSuKien']) ?></h3>
+                        <div class="ticket-status">
 
-                    <div class="ticket-status">
+    <?php if ($ve['TrangThai'] === 'cho_thanh_toan'): ?>
 
-                        <?php if ($ve['TrangThai'] === 'da_dang_ky'): ?>
-                            <span class="status status-active">
-                                <i class="fa-solid fa-circle-check"></i>
-                                Đã đăng ký
-                            </span>
-                        <?php else: ?>
-                            <span class="status status-cancelled">
-                                <i class="fa-solid fa-circle-xmark"></i>
-                                Đã hủy
-                            </span>
-                        <?php endif; ?>
+        <span class="status status-waiting">
+            <i class="fa-regular fa-clock"></i>
+            Chờ thanh toán
+        </span>
 
-                        <?php if ($ve['TrangThaiCheckIn'] === 'da_checkin'): ?>
-                            <span class="status status-checked">
-                                <i class="fa-solid fa-check"></i>
-                                Đã check-in
-                            </span>
-                        <?php else: ?>
-                            <span class="status status-waiting">
-                                <i class="fa-regular fa-clock"></i>
-                                Chưa check-in
-                            </span>
-                        <?php endif; ?>
+    <?php elseif ($ve['TrangThai'] === 'da_dang_ky'): ?>
 
-                    </div>
+        <?php if ($ve['TrangThaiThanhToan'] === 'thanh_cong'): ?>
+            <span class="status status-active">
+                <i class="fa-solid fa-circle-check"></i>
+                Đã thanh toán
+            </span>
+        <?php else: ?>
+            <span class="status status-active">
+                <i class="fa-solid fa-circle-check"></i>
+                Đã đăng ký
+            </span>
+        <?php endif; ?>
+
+    <?php elseif (
+        $ve['TrangThai'] === 'da_huy' &&
+        $ve['TrangThaiThanhToan'] === 'that_bai'
+    ): ?>
+
+        <span class="status status-cancelled">
+            <i class="fa-solid fa-circle-xmark"></i>
+            Thanh toán thất bại
+        </span>
+
+    <?php else: ?>
+
+        <span class="status status-cancelled">
+            <i class="fa-solid fa-circle-xmark"></i>
+            Đã hủy
+        </span>
+
+    <?php endif; ?>
+
+
+    <?php if ($ve['TrangThai'] === 'da_dang_ky'): ?>
+
+        <?php if ($ve['TrangThaiCheckIn'] === 'da_checkin'): ?>
+            <span class="status status-checked">
+                <i class="fa-solid fa-check"></i>
+                Đã check-in
+            </span>
+        <?php else: ?>
+            <span class="status status-waiting">
+                <i class="fa-regular fa-clock"></i>
+                Chưa check-in
+            </span>
+        <?php endif; ?>
+
+    <?php endif; ?>
+
+</div>
 
                     <div class="ticket-info-grid">
 
@@ -567,10 +624,16 @@ require __DIR__ . '/../../components/header.php';
 
                     </div>
 
-                    <div class="ticket-code">
-                        <div class="ticket-code-label">MÃ VÉ</div>
-                        <span class="ticket-code-value"><?= e($ve['MaVe']) ?></span>
-                    </div>
+                    <?php if ($ve['TrangThai'] === 'da_dang_ky'): ?>
+
+    <div class="ticket-code">
+        <div class="ticket-code-label">MÃ VÉ</div>
+        <span class="ticket-code-value">
+            <?= e($ve['MaVe']) ?>
+        </span>
+    </div>
+
+<?php endif; ?>
 
                 </div>
 
@@ -586,52 +649,78 @@ require __DIR__ . '/../../components/header.php';
 
                     <p>Chúc bạn có những trải nghiệm tuyệt vời!</p>
 
-                    <?php if (
-                        $ve['TrangThai'] === 'da_dang_ky' &&
-                        $ve['TrangThaiCheckIn'] !== 'da_checkin' &&
-                        strtotime($ve['ThoiGianBatDau']) > time()
-                    ): ?>
+                    <?php if ($ve['TrangThai'] === 'cho_thanh_toan'): ?>
 
-                        <form
-                            action="<?= BASE_URL ?>/backend/registrations/cancel.php"
-                            method="POST"
-                            onsubmit="return confirm('Bạn có chắc chắn muốn hủy đăng ký sự kiện này không?');"
-                        >
+    <a
+        href="<?= BASE_URL ?>/pages/thanhtoan/thanh_toan.php?id=<?= (int) $ve['ID'] ?>"
+        class="cancel-button"
+        style="
+            display: inline-block;
+            text-decoration: none;
+            border-color: #23865b;
+            color: #23865b;
+        "
+    >
+        <i class="fa-solid fa-credit-card"></i>
+        Tiếp tục thanh toán
+    </a>
 
-                            <input
-                                type="hidden"
-                                name="ID_DangKy"
-                                value="<?= (int) $ve['ID'] ?>"
-                            >
+<?php elseif (
+    $ve['TrangThai'] === 'da_dang_ky' &&
+    $ve['TrangThaiCheckIn'] !== 'da_checkin' &&
+    strtotime($ve['ThoiGianBatDau']) > time()
+): ?>
 
-                            <?= csrfField() ?>
+    <form
+        action="<?= BASE_URL ?>/backend/registrations/cancel.php"
+        method="POST"
+        onsubmit="return confirm('Bạn có chắc chắn muốn hủy đăng ký sự kiện này không?');"
+    >
 
-                            <button type="submit" class="cancel-button">
-                                <i class="fa-solid fa-xmark"></i>
-                                Hủy đăng ký
-                            </button>
+        <input
+            type="hidden"
+            name="ID_DangKy"
+            value="<?= (int) $ve['ID'] ?>"
+        >
 
-                        </form>
+        <?= csrfField() ?>
 
-                    <?php elseif ($ve['TrangThai'] === 'da_huy'): ?>
+        <button type="submit" class="cancel-button">
+            <i class="fa-solid fa-xmark"></i>
+            Hủy đăng ký
+        </button>
 
-                        <span class="cancel-disabled">
-                            Vé đã được hủy
-                        </span>
+    </form>
 
-                    <?php elseif ($ve['TrangThaiCheckIn'] === 'da_checkin'): ?>
+<?php elseif (
+    $ve['TrangThai'] === 'da_huy' &&
+    $ve['TrangThaiThanhToan'] === 'that_bai'
+): ?>
 
-                        <span class="cancel-disabled">
-                            Vé đã check-in
-                        </span>
+    <span class="cancel-disabled">
+        Giao dịch không thành công
+    </span>
 
-                    <?php else: ?>
+<?php elseif ($ve['TrangThai'] === 'da_huy'): ?>
 
-                        <span class="cancel-disabled">
-                            Không thể hủy vé
-                        </span>
+    <span class="cancel-disabled">
+        Vé đã được hủy
+    </span>
 
-                    <?php endif; ?>
+<?php elseif ($ve['TrangThaiCheckIn'] === 'da_checkin'): ?>
+
+    <span class="cancel-disabled">
+        Vé đã check-in
+    </span>
+
+<?php else: ?>
+
+    <span class="cancel-disabled">
+        Không thể hủy vé
+    </span>
+
+<?php endif; ?>
+
 
                 </div>
 
