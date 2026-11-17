@@ -81,6 +81,8 @@ require_once ROOT_PATH . '/components/header.php';
 
 <style>
 .payment-main {
+    flex: 1 0 auto;
+    width: 100%;
     min-height: 75vh;
     padding: 55px 20px;
     background: #f3f7fb;
@@ -180,6 +182,22 @@ require_once ROOT_PATH . '/components/header.php';
     display: flex;
     gap: 15px;
     margin-top: 30px;
+}
+
+.payment-actions {
+    display: flex !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+    gap: 15px;
+    margin-top: 30px;
+    width: 100%;
+}
+
+.payment-actions button {
+    display: block !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+    min-height: 48px;
 }
 
 .payment-actions button {
