@@ -1,25 +1,22 @@
 <?php
 /**
- * Xử lý dữ liệu cho trang QUẢN TRỊ sự kiện (qlsukien.php).
- * - GET : nạp danh sách, thống kê, lọc, phân trang
- * - POST: thêm / sửa / xóa sự kiện (qua AJAX, trả về JSON)
+ * Xử lý dữ liệu cho trang quản lý sự kiện của ORGANIZER (qlsukien.php).
+ * Thêm / sửa / xóa KHÔNG áp dụng ngay: chỉ tạo yêu cầu trong bảng yeucau_sukien,
+ * admin duyệt ở pages/admin/duyetsukien.php thì bảng sukien mới thay đổi.
  *
- * CSDL music4life: sukien, danhmuc, dangkysukien.
+ * - GET : nạp danh sách sự kiện của tôi, thống kê, lọc, phân trang, các yêu cầu của tôi
+ * - POST: save / delete / cancel_request (AJAX, trả về JSON)
  * Được nạp từ qlsukien.php (sau session_start và tạo CSRF token).
  */
 require_once __DIR__ . '/../../includes/auth.php';
 require_once ROOT_PATH . '/config/database.php';   // cung cấp getDB()
 
-/* ---------- Cấu hình: chỉnh cho khớp CSDL của nhóm ---------- */
-const QL_STATUS_OPEN      = 'sap_dien_ra';   // giá trị cột sukien.TrangThai cho sự kiện mới (đổi nếu ENUM khác)
 const QL_STATUS_CANCELLED = 'da_huy';
 const QL_MAX_IMAGE        = 2 * 1024 * 1024; // 2MB
 const QL_PER_PAGE         = 8;
 const QL_UPLOAD_SUBDIR    = 'assets/uploads/sukien/';  // thư mục lưu ảnh, tính từ ROOT_PATH
 
 /* ---------- Hàm hỗ trợ ---------- */
-if (!function_exists('e')) { function e($s) { return htmlspecialchars((string)$s, ENT_QUOTES, 'UTF-8'); } }
-
 function ql_url(array $over = []): string {
     $q = array_merge($_GET, $over);
     $q = array_filter($q, fn($v) => $v !== '' && $v !== null);
@@ -27,12 +24,6 @@ function ql_url(array $over = []): string {
 }
 
 function ql_base(): string { return defined('BASE_URL') ? rtrim(BASE_URL, '/') : '../..'; }
-
-// Chỉ quản trị viên. Nếu auth.php của nhóm đã có isAdmin() thì dùng luôn;
-// nếu không, đọc vai trò từ session (đổi tên khóa / giá trị cho khớp phần đăng nhập).
-function ql_is_admin(): bool {
-    return true;   // mọi người dùng đã đăng nhập đều được vào trang quản lý sự kiện
-}
 
 function ql_json(int $code, array $payload): void {
     http_response_code($code);
@@ -82,7 +73,7 @@ function ql_delete_image(?string $name): void {
 }
 
 /* ---------- Giá trị mặc định cho view ---------- */
-$events = $shown = $cats = [];
+$events = $shown = $cats = $myRequests = [];
 $stats  = ['total' => 0, 'upcoming' => 0, 'past' => 0, 'cancelled' => 0, 'registered' => 0];
 $q = $cat = '';
 $tt = 'all';
@@ -91,29 +82,78 @@ $page = $pages = 1;
 $total = 0;
 $dbError = false;
 
-/* ---------- Kiểm tra quyền ---------- */
-$forbidden = !(isLoggedIn() && ql_is_admin());
+/* ---------- Kiểm tra quyền: chỉ organizer (admin dùng trang duyệt) ---------- */
+$forbidden = !(isLoggedIn() && currentRole() === 'organizer');
 if ($forbidden) {
-    if ($_SERVER['REQUEST_METHOD'] === 'POST') ql_json(403, ['ok' => false, 'message' => 'Bạn cần đăng nhập để thực hiện thao tác này.']);
+    if ($_SERVER['REQUEST_METHOD'] === 'POST') ql_json(403, ['ok' => false, 'message' => 'Bạn không có quyền thực hiện thao tác này.']);
     http_response_code(isLoggedIn() ? 403 : 401);
     return;   // view sẽ hiện thông báo từ biến $forbidden
 }
 
+$uid = (int)currentUser()['id'];
 $pdo = getDB();
 
+// "Sự kiện của tôi" = sự kiện có yêu cầu THÊM của tôi đã được admin duyệt (không cần sửa bảng sukien)
+$own = "EXISTS (SELECT 1 FROM yeucau_sukien y WHERE y.ID_SuKien = s.ID AND y.ID_NguoiGui = :uid
+                  AND y.LoaiYeuCau = 'them' AND y.TrangThai = 'da_duyet')";
+
 /* =====================================================
-   POST: thêm / sửa / xóa (AJAX -> JSON)
+   POST: gửi yêu cầu thêm / sửa / xóa, rút yêu cầu (AJAX -> JSON)
    ===================================================== */
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    if (!hash_equals($_SESSION['csrf_token'] ?? '', $_POST['csrf_token'] ?? '')) {
+    // Chấp nhận token của auth.php (csrfValid) hoặc token do qlsukien.php tự tạo ($_SESSION['csrf_token'])
+    $tokenView = (string)($_SESSION['csrf_token'] ?? '');
+    $csrfOk = csrfValid() || ($tokenView !== '' && hash_equals($tokenView, (string)($_POST['csrf_token'] ?? '')));
+    if (!$csrfOk) {
         ql_json(403, ['ok' => false, 'message' => 'Phiên làm việc đã hết hạn. Hãy tải lại trang và thử lại.']);
     }
-    $action = $_POST['action'] ?? '';
-    $id     = (int)($_POST['id'] ?? 0);
+    $action    = $_POST['action'] ?? '';
+    $id        = (int)($_POST['id'] ?? 0);
+    $uploaded  = null;    // ảnh mới vừa lưu, để dọn nếu có lỗi
+    $imageKept = false;
 
     try {
-        /* ---------- Thêm / sửa ---------- */
-        if ($action === 'save') {
+        if (!in_array($action, ['save', 'delete', 'cancel_request'], true)) {
+            ql_json(400, ['ok' => false, 'message' => 'Thao tác không hợp lệ.']);
+        }
+
+        /* ---------- Rút lại yêu cầu đang chờ ---------- */
+        if ($action === 'cancel_request') {
+            $rid = (int)($_POST['request_id'] ?? 0);
+            $st = $pdo->prepare("SELECT DuLieu FROM yeucau_sukien WHERE ID = ? AND ID_NguoiGui = ? AND TrangThai = 'cho_duyet'");
+            $st->execute([$rid, $uid]);
+            $row = $st->fetch(PDO::FETCH_ASSOC);
+            if (!$row) ql_json(404, ['ok' => false, 'message' => 'Không tìm thấy yêu cầu đang chờ duyệt.']);
+
+            $del = $pdo->prepare("DELETE FROM yeucau_sukien WHERE ID = ? AND TrangThai = 'cho_duyet'");
+            $del->execute([$rid]);
+            if ($del->rowCount() === 0) ql_json(409, ['ok' => false, 'message' => 'Yêu cầu này đã được admin xử lý.']);
+
+            ql_delete_image((json_decode((string)$row['DuLieu'], true) ?: [])['image'] ?? null);
+            ql_json(200, ['ok' => true, 'message' => 'Đã rút lại yêu cầu.']);
+        }
+
+        /* ---------- Sửa / xóa: phải là sự kiện của tôi và chưa có yêu cầu nào đang chờ ---------- */
+        $cur = null;
+        if ($id > 0) {
+            $st = $pdo->prepare(
+                "SELECT s.TenSuKien,
+                        (SELECT COUNT(*) FROM yeucau_sukien p WHERE p.ID_SuKien = s.ID AND p.TrangThai = 'cho_duyet') AS pending,
+                        (SELECT COUNT(*) FROM dangkysukien r WHERE r.ID_SuKien = s.ID AND r.TrangThai = 'da_dang_ky') AS registered
+                 FROM sukien s WHERE s.ID = :id AND $own"
+            );
+            $st->execute([':id' => $id, ':uid' => $uid]);
+            $cur = $st->fetch(PDO::FETCH_ASSOC);
+            if (!$cur)            ql_json(403, ['ok' => false, 'message' => 'Bạn chỉ được quản lý sự kiện do mình tạo.']);
+            if ($cur['pending'])  ql_json(409, ['ok' => false, 'message' => 'Sự kiện này đang có yêu cầu chờ duyệt. Hãy đợi admin xử lý hoặc rút yêu cầu cũ.']);
+        }
+
+        if ($action === 'delete') {
+            if (!$cur) ql_json(404, ['ok' => false, 'message' => 'Không tìm thấy sự kiện.']);
+            $type = 'xoa';
+            $data = ['title' => $cur['TenSuKien']];
+        } else {
+            /* ---------- Thêm / sửa: kiểm tra dữ liệu ---------- */
             $errors = [];
 
             $title = trim($_POST['title'] ?? '');
@@ -135,93 +175,45 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
             $capacity = filter_var($_POST['capacity'] ?? null, FILTER_VALIDATE_INT);
             if ($capacity === false || $capacity < 1) $errors['capacity'] = 'Số lượng tối đa phải là số nguyên lớn hơn 0';
-
-            $desc = trim($_POST['desc'] ?? '');
+            elseif ($cur && $capacity < (int)$cur['registered']) $errors['capacity'] = "Đã có {$cur['registered']} người đăng ký, không thể đặt thấp hơn";
 
             if ($errors) ql_json(422, ['ok' => false, 'message' => 'Dữ liệu chưa hợp lệ', 'errors' => $errors]);
 
-            $newImage = ql_save_image('image', $errors);   // chỉ lưu file sau khi các trường khác đã hợp lệ
+            $uploaded = ql_save_image('image', $errors);   // chỉ lưu file sau khi các trường khác đã hợp lệ
             if ($errors) ql_json(422, ['ok' => false, 'message' => 'Dữ liệu chưa hợp lệ', 'errors' => $errors]);
 
-            try {
-                $pdo->beginTransaction();
-
-                if ($id === 0) {                              // ----- Thêm mới -----
-                    $pdo->prepare(
-                        'INSERT INTO sukien (TenSuKien, ID_DanhMuc, ThoiGianBatDau, ThoiGianKetThuc, DiaDiem, MoTa, AnhSuKien, SoLuongToiDa, TrangThai)
-                         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)'
-                    )->execute([$title, $catId, $start, $end, $location, $desc, $newImage, $capacity, QL_STATUS_OPEN]);
-                    $pdo->commit();
-                    ql_json(201, ['ok' => true, 'message' => 'Đã thêm sự kiện "' . $title . '".']);
-                }
-
-                // ----- Sửa: khóa dòng để số lượng đăng ký không đổi giữa chừng -----
-                $st = $pdo->prepare('SELECT AnhSuKien FROM sukien WHERE ID = ? FOR UPDATE');
-                $st->execute([$id]);
-                $row = $st->fetch(PDO::FETCH_ASSOC);
-                if (!$row) {
-                    $pdo->rollBack();
-                    ql_delete_image($newImage);
-                    ql_json(404, ['ok' => false, 'message' => 'Không tìm thấy sự kiện.']);
-                }
-
-                $st = $pdo->prepare("SELECT COUNT(*) FROM dangkysukien WHERE ID_SuKien = ? AND TrangThai = 'da_dang_ky'");
-                $st->execute([$id]);
-                $registered = (int)$st->fetchColumn();
-                if ($capacity < $registered) {
-                    $pdo->rollBack();
-                    ql_delete_image($newImage);
-                    ql_json(422, ['ok' => false, 'message' => 'Dữ liệu chưa hợp lệ',
-                        'errors' => ['capacity' => "Đã có $registered người đăng ký, không thể đặt thấp hơn"]]);
-                }
-
-                $image = $row['AnhSuKien'];
-                if ($newImage !== null)                          $image = $newImage;   // thay ảnh mới
-                elseif (($_POST['remove_image'] ?? '') === '1')  $image = null;        // chỉ xóa ảnh
-
-                $pdo->prepare(
-                    'UPDATE sukien SET TenSuKien = ?, ID_DanhMuc = ?, ThoiGianBatDau = ?, ThoiGianKetThuc = ?,
-                                       DiaDiem = ?, MoTa = ?, AnhSuKien = ?, SoLuongToiDa = ?
-                     WHERE ID = ?'
-                )->execute([$title, $catId, $start, $end, $location, $desc, $image, $capacity, $id]);
-                $pdo->commit();
-
-                if ($image !== $row['AnhSuKien']) ql_delete_image($row['AnhSuKien']);   // dọn ảnh cũ sau khi lưu thành công
-                ql_json(200, ['ok' => true, 'message' => 'Đã cập nhật sự kiện "' . $title . '".']);
-
-            } catch (PDOException $ex) {
-                if ($pdo->inTransaction()) $pdo->rollBack();
-                ql_delete_image($newImage);
-                throw $ex;
-            }
+            $type = $id === 0 ? 'them' : 'sua';
+            $data = [
+                'title' => $title, 'category_id' => $catId, 'start' => $start, 'end' => $end,
+                'location' => $location, 'desc' => trim($_POST['desc'] ?? ''), 'capacity' => $capacity,
+                'image' => $uploaded, 'remove_image' => (($_POST['remove_image'] ?? '') === '1'),
+            ];
         }
 
-        /* ---------- Xóa ---------- */
-        if ($action === 'delete') {
-            $st = $pdo->prepare('SELECT TenSuKien, TrangThai, AnhSuKien FROM sukien WHERE ID = ?');
-            $st->execute([$id]);
-            $row = $st->fetch(PDO::FETCH_ASSOC);
-            if (!$row) ql_json(404, ['ok' => false, 'message' => 'Không tìm thấy sự kiện.']);
+        /* ---------- Lưu yêu cầu chờ duyệt (bảng sukien chưa đổi gì) ---------- */
+        $pdo->prepare('INSERT INTO yeucau_sukien (ID_SuKien, ID_NguoiGui, LoaiYeuCau, DuLieu) VALUES (?, ?, ?, ?)')
+            ->execute([$id ?: null, $uid, $type, json_encode($data, JSON_UNESCAPED_UNICODE)]);
+        $imageKept = true;   // ảnh nằm trong yêu cầu, admin từ chối hoặc người gửi rút lại thì mới xóa
 
-            // Còn bất kỳ bản ghi đăng ký nào (kể cả đã hủy) thì không xóa cứng, để giữ lịch sử và khóa ngoại
-            $st = $pdo->prepare('SELECT COUNT(*) FROM dangkysukien WHERE ID_SuKien = ?');
-            $st->execute([$id]);
-            if ((int)$st->fetchColumn() > 0) {
-                if ($row['TrangThai'] === QL_STATUS_CANCELLED) {
-                    ql_json(200, ['ok' => true, 'message' => 'Sự kiện này đã ở trạng thái "Đã hủy".']);
-                }
-                $pdo->prepare('UPDATE sukien SET TrangThai = ? WHERE ID = ?')->execute([QL_STATUS_CANCELLED, $id]);
-                ql_json(200, ['ok' => true, 'message' => 'Sự kiện đã có đăng ký nên được chuyển sang trạng thái "Đã hủy".']);
+        // Báo cho tất cả admin (lỗi thông báo không làm hỏng yêu cầu đã gửi)
+        $label = ['them' => 'thêm', 'sua' => 'chỉnh sửa', 'xoa' => 'xóa'][$type];
+        try {
+            foreach ($pdo->query("SELECT ID FROM nguoidung WHERE VaiTro = 'admin' AND TrangThai = 'hoat_dong'")->fetchAll(PDO::FETCH_COLUMN) as $adminId) {
+                guiThongBao($pdo, (int)$adminId, 'Có yêu cầu sự kiện cần duyệt',
+                    ($_SESSION['user_name'] ?? 'Một nhà tổ chức') . " gửi yêu cầu $label sự kiện \"{$data['title']}\".", 'sukien_yeucau');
             }
-
-            $pdo->prepare('DELETE FROM sukien WHERE ID = ?')->execute([$id]);
-            ql_delete_image($row['AnhSuKien']);
-            ql_json(200, ['ok' => true, 'message' => 'Đã xóa sự kiện "' . $row['TenSuKien'] . '".']);
+        } catch (Throwable $t) {
+            error_log('qlsukien_controller.php (thông báo): ' . $t->getMessage());
         }
 
-        ql_json(400, ['ok' => false, 'message' => 'Thao tác không hợp lệ.']);
+        ql_json(202, ['ok' => true, 'message' => [
+            'them' => 'Đã gửi sự kiện "' . $data['title'] . '" cho admin duyệt. Sự kiện sẽ hiển thị sau khi được duyệt.',
+            'sua'  => 'Đã gửi yêu cầu chỉnh sửa "' . $data['title'] . '". Thông tin cũ được giữ nguyên cho đến khi admin duyệt.',
+            'xoa'  => 'Đã gửi yêu cầu xóa sự kiện "' . $data['title'] . '", chờ admin duyệt.',
+        ][$type]]);
 
     } catch (PDOException $ex) {
+        if (!$imageKept) ql_delete_image($uploaded);
         error_log('qlsukien_controller.php: ' . $ex->getMessage());
         ql_json(500, ['ok' => false, 'message' => 'Lỗi máy chủ, hãy thử lại sau.']);
     }
@@ -230,30 +222,59 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 /* =====================================================
    GET: nạp dữ liệu hiển thị
    ===================================================== */
+$pendingMap = [];
 try {
-    // Quản trị thấy TẤT CẢ sự kiện (kể cả đã hủy / danh mục bị ẩn)
-    $sql = "SELECT s.ID               AS id,
-                   s.TenSuKien        AS title,
-                   s.ID_DanhMuc       AS category_id,
-                   d.TenDanhMuc       AS category,
-                   s.ThoiGianBatDau   AS start_at,
-                   s.ThoiGianKetThuc  AS end_at,
-                   s.DiaDiem          AS location,
-                   s.MoTa             AS `desc`,
-                   s.AnhSuKien        AS image,
-                   s.SoLuongToiDa     AS capacity,
-                   s.TrangThai        AS db_status,
-                   (SELECT COUNT(*) FROM dangkysukien r
-                     WHERE r.ID_SuKien = s.ID AND r.TrangThai = 'da_dang_ky') AS registered
-            FROM sukien s
-            LEFT JOIN danhmuc d ON d.ID = s.ID_DanhMuc
-            ORDER BY s.ThoiGianBatDau DESC";
-    $events = $pdo->query($sql)->fetchAll(PDO::FETCH_ASSOC);
-    $cats   = $pdo->query("SELECT ID AS id, TenDanhMuc AS name FROM danhmuc WHERE TrangThai = 'hoat_dong' ORDER BY TenDanhMuc")
-                  ->fetchAll(PDO::FETCH_ASSOC);
+    $st = $pdo->prepare(
+        "SELECT s.ID               AS id,
+                s.TenSuKien        AS title,
+                s.ID_DanhMuc       AS category_id,
+                d.TenDanhMuc       AS category,
+                s.ThoiGianBatDau   AS start_at,
+                s.ThoiGianKetThuc  AS end_at,
+                s.DiaDiem          AS location,
+                s.MoTa             AS `desc`,
+                s.AnhSuKien        AS image,
+                s.SoLuongToiDa     AS capacity,
+                s.TrangThai        AS db_status,
+                (SELECT COUNT(*) FROM dangkysukien r
+                  WHERE r.ID_SuKien = s.ID AND r.TrangThai = 'da_dang_ky') AS registered
+         FROM sukien s
+         LEFT JOIN danhmuc d ON d.ID = s.ID_DanhMuc
+         WHERE $own
+         ORDER BY s.ThoiGianBatDau DESC"
+    );
+    $st->execute([':uid' => $uid]);
+    $events = $st->fetchAll(PDO::FETCH_ASSOC);
+
+    $cats = $pdo->query("SELECT ID AS id, TenDanhMuc AS name FROM danhmuc WHERE TrangThai = 'hoat_dong' ORDER BY TenDanhMuc")
+                ->fetchAll(PDO::FETCH_ASSOC);
+
+    // Sự kiện nào đang có yêu cầu sửa / xóa chờ duyệt
+    foreach ($pdo->query("SELECT ID_SuKien, LoaiYeuCau FROM yeucau_sukien WHERE TrangThai = 'cho_duyet' AND ID_SuKien IS NOT NULL") as $p) {
+        $pendingMap[(int)$p['ID_SuKien']] = $p['LoaiYeuCau'];
+    }
+
+    // Yêu cầu của tôi (mới nhất trước), gồm cả yêu cầu "thêm" chưa có trong bảng sukien
+    $st = $pdo->prepare('SELECT * FROM yeucau_sukien WHERE ID_NguoiGui = ? ORDER BY NgayGui DESC LIMIT 30');
+    $st->execute([$uid]);
+    foreach ($st->fetchAll(PDO::FETCH_ASSOC) as $r) {
+        $d = json_decode((string)$r['DuLieu'], true) ?: [];
+        $myRequests[] = [
+            'id'         => (int)$r['ID'],
+            'type'       => $r['LoaiYeuCau'],                                   // them | sua | xoa
+            'type_label' => ['them' => 'Thêm', 'sua' => 'Chỉnh sửa', 'xoa' => 'Xóa'][$r['LoaiYeuCau']] ?? '',
+            'event_id'   => $r['ID_SuKien'] ? (int)$r['ID_SuKien'] : null,
+            'title'      => (string)($d['title'] ?? ''),
+            'status'     => $r['TrangThai'],                                    // cho_duyet | da_duyet | tu_choi
+            'reason'     => (string)$r['LyDoTuChoi'],
+            'created_at' => $r['NgayGui'],
+            'handled_at' => $r['NgayXuLy'],
+            'image_url'  => ql_img_url($d['image'] ?? null),
+        ];
+    }
 } catch (PDOException $ex) {
     error_log('qlsukien_controller.php: ' . $ex->getMessage());
-    $events = []; $cats = []; $dbError = true;
+    $events = []; $cats = []; $myRequests = []; $pendingMap = []; $dbError = true;
 }
 
 $today = date('Y-m-d');
@@ -263,6 +284,7 @@ foreach ($events as &$ev) {
     $ev['capacity']    = (int)$ev['capacity'];
     $ev['registered']  = (int)$ev['registered'];
     $ev['desc']        = (string)$ev['desc'];
+    $ev['pending']     = $pendingMap[$ev['id']] ?? null;   // 'sua' | 'xoa' | null (view: hiện "Chờ duyệt", khóa nút sửa/xóa)
 
     $startDate = substr((string)$ev['start_at'], 0, 10);
     $endDate   = $ev['end_at'] ? substr((string)$ev['end_at'], 0, 10) : $startDate;

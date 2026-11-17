@@ -1,11 +1,8 @@
 <?php
 session_start();
 
-if (empty($_SESSION['csrf_token'])) {
-    $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
-}
-
 // Toàn bộ xử lý dữ liệu nằm ở file riêng; file này chỉ hiển thị.
+// (Token CSRF dùng csrfToken()/csrfField() của auth.php, được nạp trong controller.)
 require_once __DIR__ . '/Qlsukien_controller.php';
 
 $statusLabel = [
@@ -14,13 +11,18 @@ $statusLabel = [
     'past'      => 'Đã kết thúc',
     'cancelled' => 'Đã hủy',
 ];
+$requestStatusLabel = [
+    'cho_duyet' => 'Chờ duyệt',
+    'da_duyet'  => 'Đã duyệt',
+    'tu_choi'   => 'Bị từ chối',
+];
 ?>
 <!DOCTYPE html>
 <html lang="vi">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="csrf-token" content="<?= e($_SESSION['csrf_token']) ?>">
+    <meta name="csrf-token" content="<?= e(csrfToken()) ?>">
 
     <title>Quản lý sự kiện</title>
 
@@ -46,9 +48,11 @@ $statusLabel = [
         <section class="ql-denied">
             <i class="fa-solid fa-lock"></i>
             <h1>Bạn không có quyền truy cập trang này</h1>
-            <p>Trang quản lý sự kiện chỉ dành cho quản trị viên và nhà tổ chức.</p>
+            <p>Trang quản lý sự kiện chỉ dành cho nhà tổ chức. Quản trị viên duyệt sự kiện tại trang Duyệt sự kiện.</p>
             <?php if (!isLoggedIn()): ?>
                 <a class="ql-btn" href="<?= e(ql_base() . '/pages/taikhoan/dangnhap.php') ?>">Đăng nhập</a>
+            <?php elseif (currentRole() === 'admin'): ?>
+                <a class="ql-btn" href="<?= e(ql_base() . '/pages/admin/duyetsukien.php') ?>">Đến trang duyệt sự kiện</a>
             <?php else: ?>
                 <a class="ql-btn ql-btn--ghost" href="sukien.php">Về trang sự kiện</a>
             <?php endif; ?>
@@ -84,7 +88,7 @@ $statusLabel = [
             <h2 class="ql-card__title"><span aria-hidden="true">✦</span> <span id="qlFormTitle">Thông tin sự kiện</span></h2>
 
             <form id="qlForm" novalidate enctype="multipart/form-data">
-                <input type="hidden" name="csrf_token" value="<?= e($_SESSION['csrf_token']) ?>">
+                <?= csrfField() ?>
                 <input type="hidden" name="action" value="save">
                 <input type="hidden" name="id" value="0">
 
@@ -156,9 +160,10 @@ $statusLabel = [
                 </div>
 
                 <div class="ql-form__foot">
+                    <small class="ql-hint ql-hint--approve">Sự kiện chỉ hiển thị cho người dùng sau khi admin duyệt.</small>
                     <small class="ql-err ql-err--form" id="qlFormError" role="alert"></small>
                     <button type="button" class="ql-btn ql-btn--soft" id="qlReset"><i class="fa-solid fa-rotate-left"></i> Đặt lại</button>
-                    <button type="submit" class="ql-btn" id="qlSave"><i class="fa-regular fa-floppy-disk"></i> <span>Lưu sự kiện</span></button>
+                    <button type="submit" class="ql-btn" id="qlSave"><i class="fa-regular fa-floppy-disk"></i> <span>Gửi duyệt</span></button>
                 </div>
             </form>
         </section>
@@ -244,15 +249,20 @@ $statusLabel = [
                             </td>
                             <td data-label="Trạng thái">
                                 <span class="ql-badge ql-badge--<?= $ev['status'] ?>"><?= $statusLabel[$ev['status']] ?></span>
+                                <?php if ($ev['pending']): ?>
+                                    <span class="ql-badge ql-badge--pending">Chờ duyệt <?= $ev['pending'] === 'xoa' ? 'xóa' : 'sửa' ?></span>
+                                <?php endif; ?>
                             </td>
                             <td class="ql-center ql-actions">
-                                <button type="button" class="ql-act ql-act--edit js-edit" aria-label="Sửa <?= e($ev['title']) ?>">
+                                <button type="button" class="ql-act ql-act--edit js-edit" aria-label="Sửa <?= e($ev['title']) ?>"
+                                        <?= $ev['pending'] ? 'disabled title="Đang chờ admin duyệt"' : '' ?>>
                                     <i class="fa-solid fa-pen"></i> Sửa
                                 </button>
                                 <a class="ql-act ql-act--users" title="Danh sách người đăng ký" aria-label="Người đăng ký <?= e($ev['title']) ?>"
                                    href="qlchitietsukien.php?id=<?= $ev['id'] ?>"><i class="fa-solid fa-users"></i></a>
                                 <button type="button" class="ql-act ql-act--del js-delete" aria-label="Xóa <?= e($ev['title']) ?>"
-                                        data-id="<?= $ev['id'] ?>" data-title="<?= e($ev['title']) ?>" data-registered="<?= $ev['registered'] ?>">
+                                        data-id="<?= $ev['id'] ?>" data-title="<?= e($ev['title']) ?>" data-registered="<?= $ev['registered'] ?>"
+                                        <?= $ev['pending'] ? 'disabled title="Đang chờ admin duyệt"' : '' ?>>
                                     <i class="fa-solid fa-trash"></i> Xóa
                                 </button>
                             </td>
@@ -273,6 +283,52 @@ $statusLabel = [
             <?php endif; ?>
         </section>
 
+        <!-- ===== Yêu cầu của tôi ===== -->
+        <section class="ql-card ql-card--list" aria-label="Yêu cầu của tôi">
+            <h2 class="ql-card__title"><span aria-hidden="true">✦</span> Yêu cầu của tôi</h2>
+
+            <?php if (!$myRequests): ?>
+                <p class="ql-count">Bạn chưa gửi yêu cầu nào.</p>
+            <?php else: ?>
+            <div class="ql-tablewrap">
+                <table class="ql-table">
+                    <thead>
+                        <tr>
+                            <th>Loại</th>
+                            <th>Sự kiện</th>
+                            <th>Ngày gửi</th>
+                            <th>Trạng thái</th>
+                            <th class="ql-center">Thao tác</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                    <?php foreach ($myRequests as $rq): ?>
+                        <tr>
+                            <td data-label="Loại"><?= e($rq['type_label']) ?></td>
+                            <td data-label="Sự kiện"><strong><?= e($rq['title']) ?></strong></td>
+                            <td data-label="Ngày gửi"><?= e(date('d/m/Y H:i', strtotime($rq['created_at']))) ?></td>
+                            <td data-label="Trạng thái">
+                                <span class="ql-badge ql-badge--<?= e($rq['status']) ?>"><?= e($requestStatusLabel[$rq['status']] ?? $rq['status']) ?></span>
+                                <?php if ($rq['status'] === 'tu_choi' && $rq['reason'] !== ''): ?>
+                                    <small class="ql-reason">Lý do: <?= e($rq['reason']) ?></small>
+                                <?php endif; ?>
+                            </td>
+                            <td class="ql-center ql-actions">
+                                <?php if ($rq['status'] === 'cho_duyet'): ?>
+                                    <button type="button" class="ql-act ql-act--del js-cancel"
+                                            data-id="<?= $rq['id'] ?>" data-title="<?= e($rq['title']) ?>">
+                                        <i class="fa-solid fa-rotate-left"></i> Rút yêu cầu
+                                    </button>
+                                <?php endif; ?>
+                            </td>
+                        </tr>
+                    <?php endforeach; ?>
+                    </tbody>
+                </table>
+            </div>
+            <?php endif; ?>
+        </section>
+
         <!-- Thông báo nhanh -->
         <div class="ql-toasts" id="qlToasts" aria-live="polite"></div>
 
@@ -284,6 +340,29 @@ $statusLabel = [
     <script src="../../assets/js/components.js"></script>
     <?php if (!$forbidden): ?>
     <script src="Qlsukien.js"></script>
+    <script>
+    // Rút lại yêu cầu đang chờ duyệt (token lấy từ csrfField() trong form, đúng tên field của auth.php)
+    document.querySelectorAll('.js-cancel').forEach(function (btn) {
+        btn.addEventListener('click', async function () {
+            if (!confirm('Rút lại yêu cầu "' + btn.dataset.title + '"?')) return;
+            const tk = document.querySelector('#qlForm input[type="hidden"][name*="csrf"]');
+            const fd = new FormData();
+            fd.append(tk.name, tk.value);
+            fd.append('action', 'cancel_request');
+            fd.append('request_id', btn.dataset.id);
+            btn.disabled = true;
+            try {
+                const res  = await fetch(location.href, { method: 'POST', body: fd });
+                const json = await res.json();
+                alert(json.message);
+                if (json.ok) location.reload(); else btn.disabled = false;
+            } catch (err) {
+                alert('Không kết nối được máy chủ.');
+                btn.disabled = false;
+            }
+        });
+    });
+    </script>
     <?php endif; ?>
 
 </body>

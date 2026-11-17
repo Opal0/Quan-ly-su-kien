@@ -103,7 +103,7 @@ if ($role !== 'guest') {
                             </a>
 
                         <?php elseif ($role === 'organizer'): ?>
-                            <a href="<?= $B ?>/pages/sukien/quanly.php">
+                            <a href="<?= $B ?>/pages/sukien/Qlsukien.php">
                                 <i class="fa-solid fa-calendar-plus"></i> Chuyển sang trang đăng sự kiện
                             </a>
 
