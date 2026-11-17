@@ -1,3 +1,4 @@
+
 <?php
 require_once __DIR__ . '/../../includes/auth.php';
 
@@ -79,8 +80,8 @@ try {
         $unitPrice = (float) $ticket['GiaVe'];
 
     } else {
-        // Không chọn loại vé chỉ được phép nếu sự kiện
-        // chưa thiết lập loại vé đang hoạt động.
+        // Chỉ cho phép không chọn loại vé nếu sự kiện
+        // không có loại vé nào đang hoạt động.
         $stmt = $db->prepare("
             SELECT COUNT(*)
             FROM loaive
@@ -93,12 +94,12 @@ try {
             throw new Exception('Vui lòng chọn loại vé của sự kiện.');
         }
 
-        // Đăng ký miễn phí không có loại vé
+        // Đăng ký miễn phí
         $quantity = 1;
         $unitPrice = 0;
     }
 
-    // 3. Kiểm tra đăng ký cũ của người dùng
+    // 3. Kiểm tra đăng ký cũ
     $stmt = $db->prepare("
         SELECT ID, TrangThai
         FROM dangkysukien
@@ -114,7 +115,7 @@ try {
         throw new Exception('Bạn đã đăng ký sự kiện này rồi.');
     }
 
-    // 4. Kiểm tra số lượng còn lại của loại vé
+    // 4. Kiểm tra số lượng vé còn lại
     if ($ticket) {
         $stmt = $db->prepare("
             SELECT COALESCE(SUM(SoLuong), 0)
@@ -132,7 +133,7 @@ try {
         }
     }
 
-    // 5. Kiểm tra tổng sức chứa sự kiện
+    // 5. Kiểm tra sức chứa sự kiện
     $stmt = $db->prepare("
         SELECT COALESCE(SUM(SoLuong), 0)
         FROM dangkysukien
@@ -150,15 +151,34 @@ try {
 
     // 6. Tính tiền tại server
     $totalPrice = $unitPrice * $quantity;
+
+    // Tạo mã vé
     $ticketCode = strtoupper(bin2hex(random_bytes(8)));
 
-    // 7. Cập nhật bản ghi cũ hoặc tạo bản ghi mới
+    // Nếu có tiền thì chờ thanh toán.
+    // Nếu miễn phí thì xác nhận đăng ký ngay.
+    $bookingStatus = $totalPrice > 0
+        ? 'cho_thanh_toan'
+        : 'da_dang_ky';
+
+    // 7. Cập nhật đăng ký cũ hoặc tạo đăng ký mới
     if ($oldBooking) {
+        // Đánh dấu các giao dịch đang chờ cũ là thất bại
+        $stmt = $db->prepare("
+            UPDATE thanhtoan
+            SET TrangThai = 'that_bai'
+            WHERE ID_DangKy = ?
+              AND TrangThai = 'cho_thanh_toan'
+        ");
+        $stmt->execute([$oldBooking['ID']]);
+
+        $bookingId = (int) $oldBooking['ID'];
+
         $stmt = $db->prepare("
             UPDATE dangkysukien
             SET
                 NgayDangKy = NOW(),
-                TrangThai = 'da_dang_ky',
+                TrangThai = ?,
                 MaVe = ?,
                 ID_LoaiVe = ?,
                 SoLuong = ?,
@@ -170,12 +190,13 @@ try {
         ");
 
         $stmt->execute([
+            $bookingStatus,
             $ticketCode,
             $ticket ? $ticketId : null,
             $quantity,
             $unitPrice,
             $totalPrice,
-            $oldBooking['ID']
+            $bookingId
         ]);
 
     } else {
@@ -192,29 +213,60 @@ try {
                 ThanhTien,
                 TrangThaiCheckIn
             )
-            VALUES (?, ?, ?, NOW(), 'da_dang_ky', ?, ?, ?, ?, 'chua_checkin')
+            VALUES (?, ?, ?, NOW(), ?, ?, ?, ?, ?, 'chua_checkin')
         ");
 
         $stmt->execute([
             $userId,
             $eventId,
             $ticket ? $ticketId : null,
+            $bookingStatus,
             $ticketCode,
             $quantity,
             $unitPrice,
             $totalPrice
         ]);
+
+        $bookingId = (int) $db->lastInsertId();
     }
 
+    // 8. Tạo giao dịch thanh toán nếu đơn hàng có tiền
+    if ($totalPrice > 0) {
+        $stmt = $db->prepare("
+            INSERT INTO thanhtoan (
+                ID_DangKy,
+                SoTien,
+                PhuongThuc,
+                TrangThai,
+                NgayTao
+            )
+            VALUES (?, ?, 'mo_phong', 'cho_thanh_toan', NOW())
+        ");
+
+        $stmt->execute([
+            $bookingId,
+            $totalPrice
+        ]);
+    }
+
+    // 9. Hoàn tất giao dịch database
     $db->commit();
 
-    // 8. Chuyển đến trang Vé của tôi
-    $result = $ticket ? 'purchased=1' : 'registered=1';
+    // 10. Chuyển trang
+    if ($totalPrice > 0) {
+        // Đơn hàng có tiền: chuyển đến trang thanh toán
+        header(
+            'Location: ' . BASE_URL .
+            '/pages/thanhtoan/thanh_toan.php?id=' . $bookingId
+        );
+    } else {
+        // Đơn hàng miễn phí: đăng ký thành công ngay
+        header(
+            'Location: ' . BASE_URL .
+            '/pages/taikhoan/ve_cua_toi.php?registered=1'
+        );
+    }
 
-    header(
-        'Location: ' . BASE_URL .
-        '/pages/taikhoan/ve_cua_toi.php?' . $result
-    );
     exit;
 
 } catch (Throwable $e) {
