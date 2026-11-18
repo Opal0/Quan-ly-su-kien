@@ -28,10 +28,26 @@ function ql_url(array $over = []): string {
 
 function ql_base(): string { return defined('BASE_URL') ? rtrim(BASE_URL, '/') : '../..'; }
 
-// Chỉ quản trị viên. Nếu auth.php của nhóm đã có isAdmin() thì dùng luôn;
-// nếu không, đọc vai trò từ session (đổi tên khóa / giá trị cho khớp phần đăng nhập).
+// Chỉ quản trị viên (admin) mới được thêm / sửa / xóa sự kiện.
+// Kiểm tra ở SERVER cho cả GET lẫn POST, nên người dùng thường không thể
+// gọi thẳng AJAX để đăng sự kiện dù biết địa chỉ trang.
+// Ngoài isAdmin() (đọc từ session), còn đối chiếu lại CSDL để tài khoản vừa bị
+// đổi vai trò / bị khóa mất quyền ngay, không phải chờ hết phiên.
 function ql_is_admin(): bool {
-    return true;   // mọi người dùng đã đăng nhập đều được vào trang quản lý sự kiện
+    if (!isAdmin()) return false;
+    try {
+        $st = getDB()->prepare('SELECT VaiTro, TrangThai FROM nguoidung WHERE ID = ?');
+        $st->execute([$_SESSION['user_id']]);
+        $u = $st->fetch(PDO::FETCH_ASSOC);
+        if (!$u || $u['VaiTro'] !== 'admin' || $u['TrangThai'] !== 'hoat_dong') {
+            $_SESSION['user_role'] = $u['VaiTro'] ?? 'user';   // đồng bộ lại session
+            return false;
+        }
+        return true;
+    } catch (Throwable $ex) {
+        error_log('ql_is_admin: ' . $ex->getMessage());
+        return false;   // lỗi DB thì từ chối cho an toàn
+    }
 }
 
 function ql_json(int $code, array $payload): void {
@@ -94,7 +110,7 @@ $dbError = false;
 /* ---------- Kiểm tra quyền ---------- */
 $forbidden = !(isLoggedIn() && ql_is_admin());
 if ($forbidden) {
-    if ($_SERVER['REQUEST_METHOD'] === 'POST') ql_json(403, ['ok' => false, 'message' => 'Bạn cần đăng nhập để thực hiện thao tác này.']);
+    if ($_SERVER['REQUEST_METHOD'] === 'POST') ql_json(403, ['ok' => false, 'message' => isLoggedIn() ? 'Chỉ quản trị viên mới được đăng và quản lý sự kiện.' : 'Bạn cần đăng nhập để thực hiện thao tác này.']);
     http_response_code(isLoggedIn() ? 403 : 401);
     return;   // view sẽ hiện thông báo từ biến $forbidden
 }

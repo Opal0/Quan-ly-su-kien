@@ -100,6 +100,12 @@ return '<a class="sk-btn" href="' .
                     <div><dt>Đã tổ chức</dt><dd><?= count(array_filter($events, fn($x) => $x['status'] === 'past')) ?></dd></div>
                     <div><dt>Lượt đăng ký</dt><dd><?= array_sum(array_column($events, 'registered')) ?></dd></div>
                 </dl>
+                <?php if (isAdmin()): ?>
+                    <!-- Chỉ admin thấy: sang trang quản lý để thêm / sửa / hủy sự kiện -->
+                    <p style="margin-top:20px">
+                        <a class="sk-btn" href="Qlsukien.php"><i class="fa-solid fa-gear"></i> Quản lý sự kiện</a>
+                    </p>
+                <?php endif; ?>
             </div>
 
             <?php if ($featured): $d = strtotime($featured['date']); ?>

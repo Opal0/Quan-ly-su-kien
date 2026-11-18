@@ -46,7 +46,7 @@ $statusLabel = [
         <section class="ql-denied">
             <i class="fa-solid fa-lock"></i>
             <h1>Bạn không có quyền truy cập trang này</h1>
-            <p>Trang quản lý sự kiện chỉ dành cho quản trị viên và nhà tổ chức.</p>
+            <p>Trang quản lý sự kiện chỉ dành cho quản trị viên.</p>
             <?php if (!isLoggedIn()): ?>
                 <a class="ql-btn" href="<?= e(ql_base() . '/pages/taikhoan/dangnhap.php') ?>">Đăng nhập</a>
             <?php else: ?>
