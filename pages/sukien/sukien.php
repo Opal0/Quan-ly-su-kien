@@ -110,9 +110,38 @@ function sk_poster(array $ev, string $extraClass = '', string $inner = ''): stri
                     <div><dt>đã tổ chức</dt><dd><?= count(array_filter($events, fn($x) => $x['status'] === 'past')) ?></dd></div>
                     <div><dt>lượt đăng ký</dt><dd><?= array_sum(array_column($events, 'registered')) ?></dd></div>
                 </dl>
-                <?php if (isAdmin()): ?>
-                    <a class="sk-btn sk-btn--sm" href="Qlsukien.php"><i class="fa-solid fa-gear"></i> Đăng và cập nhật sự kiện</a>
-                <?php endif; ?>
+                <?php
+                $showManageEvent = false;
+
+                if (isLoggedIn()) {
+                    try {
+                        $st = getDB()->prepare(
+                            "SELECT VaiTro, TrangThai
+                            FROM nguoidung
+                            WHERE ID = ?"
+                        );
+                        $st->execute([$_SESSION['user_id']]);
+
+                        $userRole = $st->fetch(PDO::FETCH_ASSOC);
+
+                        if (
+                            $userRole &&
+                            $userRole['TrangThai'] === 'hoat_dong' &&
+                            in_array($userRole['VaiTro'], ['admin', 'organizer'], true)
+                        ) {
+                            $showManageEvent = true;
+                        }
+                    } catch (Throwable $ex) {
+                        error_log('Check event permission: ' . $ex->getMessage());
+                    }
+                }
+                ?>
+
+<?php if ($showManageEvent): ?>
+    <a class="sk-btn sk-btn--sm" href="Qlsukien.php">
+        <i class="fa-solid fa-gear"></i> Đăng và cập nhật sự kiện
+    </a>
+<?php endif; ?>
             </div>
         </header>
 
