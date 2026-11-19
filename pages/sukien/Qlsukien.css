@@ -26,8 +26,19 @@
   box-shadow: 0 20px 50px -20px rgba(0, 0, 0, .55);   /* nổi lên khỏi nền xanh đậm của website */
   background: var(--ql-page);
   color: var(--ql-text);
-  font-family: "Be Vietnam Pro", "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  font-family: "Times New Roman", Times, serif;
 }
+
+/* Đổi toàn bộ chữ trong trang sang Times New Roman */
+.ql *:not(i):not(svg) {
+  font-family: "Times New Roman", Times, serif !important;
+}
+
+/* Giữ font của icon Font Awesome */
+.ql i {
+  font-family: "Font Awesome 6 Free" !important;
+}
+
 .ql *, .ql *::before, .ql *::after { box-sizing: border-box; }
 .ql h1, .ql h2, .ql p { margin: 0; }
 

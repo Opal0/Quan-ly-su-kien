@@ -11,12 +11,21 @@ require_once __DIR__ . '/../../includes/auth.php';   // cung cấp e(), isLogged
 const SK_STATUS_CANCELLED = 'da_huy';
 const SK_STATUS_FINISHED  = 'da_ket_thuc';
 const SK_REG_ACTIVE       = 'da_dang_ky';   // dangkysukien.TrangThai của lượt đăng ký còn hiệu lực
+const SK_UPLOAD_SUBDIR    = 'assets/uploads/sukien/';   // cùng thư mục với Qlsukien_controller.php
 
 /* ---------- Hàm hỗ trợ ---------- */
 if (!function_exists('sk_url')) { function sk_url(array $over = []) {
     $q = array_merge($_GET, $over);
     $q = array_filter($q, fn($v) => $v !== '' && $v !== null);
     return '?' . http_build_query($q);
+} }
+
+/* Đường dẫn ảnh sự kiện (cột AnhSuKien) - cùng cách xử lý với ql_img_url() bên trang quản lý */
+if (!function_exists('sk_img_url')) { function sk_img_url(?string $img): string {
+    if (!$img) return '';
+    if (preg_match('#^(https?:)?//#', $img)) return $img;
+    $base = defined('BASE_URL') ? rtrim(BASE_URL, '/') : '../..';
+    return $base . '/' . (strpos($img, '/') !== false ? ltrim($img, '/') : SK_UPLOAD_SUBDIR . $img);
 } }
 
 /* ---------- Giá trị mặc định cho view ---------- */
@@ -47,6 +56,7 @@ try {
                    s.ThoiGianKetThuc AS end_at,
                    s.DiaDiem        AS location,
                    s.MoTa           AS `desc`,
+                   s.AnhSuKien      AS image,
                    s.SoLuongToiDa   AS capacity,
                    s.TrangThai      AS db_status,
                    (SELECT COUNT(*) FROM dangkysukien r
@@ -69,6 +79,7 @@ foreach ($events as &$ev) {
     $ev['capacity']   = (int)$ev['capacity'];
     $ev['registered'] = (int)$ev['registered'];
     $ev['desc']       = (string)$ev['desc'];
+    $ev['image_url']  = sk_img_url($ev['image'] ?? '');
 
     $startTs   = strtotime((string)$ev['start_at']);
     $endTs     = $ev['end_at'] ? strtotime((string)$ev['end_at']) : null;
@@ -123,7 +134,7 @@ $list = array_filter($events, function ($ev) use ($q, $cat, $tt) {
 });
 usort($list, fn($a, $b) => $tt === 'past' ? strcmp($b['date'], $a['date']) : strcmp($a['date'], $b['date']));
 
-$perPage = 6;
+$perPage = 8;   // 2 hàng x 4 sự kiện
 $total   = count($list);
 $pages   = max(1, (int)ceil($total / $perPage));
 $page    = min(max(1, (int)($_GET['trang'] ?? 1)), $pages);

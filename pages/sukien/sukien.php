@@ -11,11 +11,10 @@ require_once __DIR__ . '/Sukien_Controller.php';
 /**
  * Nút hành động cho một sự kiện:
  *  - đã kết thúc / hết chỗ  -> nút vô hiệu
- *  - chưa đăng nhập         -> link tới trang đăng nhập
  *  - đã đăng ký             -> nhãn "Đã đăng ký" + nút hủy
- *  - còn lại                -> nút đăng ký (gửi POST trực tiếp)
+ *  - còn lại                -> link sang trang đặt vé
  */
-function sk_action(array $ev, bool $isLoggedIn, array $myRegs, string $label = 'Đăng ký'): string
+function sk_action(array $ev, bool $isLoggedIn, array $myRegs, string $label = 'Đặt vé'): string
 {
     if ($ev['registered_by_me'] ?? false) {
         $ve = $myRegs[$ev['id']] ?? '';
@@ -32,13 +31,24 @@ function sk_action(array $ev, bool $isLoggedIn, array $myRegs, string $label = '
     if ($ev['status'] === 'past' || $ev['full']) {
         return '<button class="sk-btn sk-btn--ghost" disabled>' . ($ev['status'] === 'past' ? 'Đã kết thúc' : 'Hết chỗ') . '</button>';
     }
-    
-$base = defined('BASE_URL') ? rtrim(BASE_URL, '/') : '../..';
 
-return '<a class="sk-btn" href="' .
-    e($base . '/pages/muave/muave.php?event_id=' . (int)$ev['id']) .
-    '">Chọn sự kiện / Đặt vé</a>';
+    $base = defined('BASE_URL') ? rtrim(BASE_URL, '/') : '../..';
+    return '<a class="sk-btn" href="' . e($base . '/pages/muave/muave.php?event_id=' . (int)$ev['id']) . '">'
+         . '<i class="fa-solid fa-ticket"></i> ' . e($label) . '</a>';
+}
 
+/**
+ * Áp phích của sự kiện: ảnh thật nếu có, không thì ảnh thay thế
+ * (vành đĩa than, mỗi sự kiện một sắc xanh riêng theo ID).
+ */
+function sk_poster(array $ev, string $extraClass = '', string $inner = ''): string
+{
+    $cls = trim('sk-poster ' . $extraClass);
+    if (!empty($ev['image_url'])) {
+        return '<div class="' . $cls . '"><img src="' . e($ev['image_url']) . '" alt="' . e($ev['title']) . '" loading="lazy">' . $inner . '</div>';
+    }
+    $hue = 190 + (($ev['id'] * 37) % 90);
+    return '<div class="' . $cls . ' sk-poster--blank" style="--h:' . $hue . '" role="img" aria-label="' . e($ev['title']) . '">' . $inner . '</div>';
 }
 ?>
 <!DOCTYPE html>
@@ -53,15 +63,13 @@ return '<a class="sk-btn" href="' .
 
     <link rel="stylesheet"
           href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="stylesheet"
+          href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&family=Bricolage+Grotesque:opsz,wght@12..96,700;12..96,800&display=swap&subset=vietnamese">
 
     <!-- Nhúng thẳng sukien.css (không phụ thuộc đường dẫn / cache) -->
     <style><?php readfile(__DIR__ . '/sukien.css'); ?></style>
-
-    <style>
-        .sk-inline { display: inline; margin: 0; }
-        .sk-mine { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
-        a.sk-btn { display: inline-block; text-decoration: none; text-align: center; }
-    </style>
 </head>
 
 <body>
@@ -90,40 +98,39 @@ return '<a class="sk-btn" href="' .
             </div>
         <?php endif; ?>
 
-        <!-- Giới thiệu + sự kiện nổi bật -->
-        <section class="sk-hero">
-            <div class="sk-hero__text">
-                <h1>Sự kiện sắp diễn ra</h1>
-                <p>Concert, đại nhạc hội và đêm nhạc đang được chờ đợi nhất mùa cuối năm. Chọn đêm diễn và đăng ký tham gia chỉ trong một phút.</p>
+        <!-- Tiêu đề + số liệu -->
+        <header class="sk-head">
+            <div>
+                <h1>Đêm nhạc sắp tới</h1>
+                <p>Chọn đêm diễn, giữ chỗ trong một phút.</p>
+            </div>
+            <div class="sk-head__side">
                 <dl class="sk-stats">
-                    <div><dt>Sắp diễn ra</dt><dd><?= count(array_filter($events, fn($x) => $x['status'] !== 'past')) ?></dd></div>
-                    <div><dt>Đã tổ chức</dt><dd><?= count(array_filter($events, fn($x) => $x['status'] === 'past')) ?></dd></div>
-                    <div><dt>Lượt đăng ký</dt><dd><?= array_sum(array_column($events, 'registered')) ?></dd></div>
+                    <div><dt>sắp diễn ra</dt><dd><?= count(array_filter($events, fn($x) => $x['status'] !== 'past')) ?></dd></div>
+                    <div><dt>đã tổ chức</dt><dd><?= count(array_filter($events, fn($x) => $x['status'] === 'past')) ?></dd></div>
+                    <div><dt>lượt đăng ký</dt><dd><?= array_sum(array_column($events, 'registered')) ?></dd></div>
                 </dl>
                 <?php if (isAdmin()): ?>
-                    <!-- Chỉ admin thấy: sang trang quản lý để thêm / sửa / hủy sự kiện -->
-                    <p style="margin-top:20px">
-                        <a class="sk-btn" href="Qlsukien.php"><i class="fa-solid fa-gear"></i> Quản lý sự kiện</a>
-                    </p>
+                    <a class="sk-btn sk-btn--sm" href="Qlsukien.php"><i class="fa-solid fa-gear"></i> Đăng và cập nhật sự kiện</a>
                 <?php endif; ?>
             </div>
+        </header>
 
-            <?php if ($featured): $d = strtotime($featured['date']); ?>
-            <article class="sk-feature">
-                <div class="sk-feature__date">
-                    <b><?= date('d', $d) ?></b>
-                    <span><?= $thang[(int)date('n', $d)] ?></span>
-                </div>
-                <div class="sk-feature__body">
-                    <span class="sk-tag"><?= e($featured['category']) ?></span>
-                    <h2><?= e($featured['title']) ?></h2>
-                    <p class="sk-meta"><i class="fa-regular fa-clock"></i> <?= e($featured['time']) ?></p>
-                    <p class="sk-meta"><i class="fa-solid fa-location-dot"></i> <?= e($featured['location']) ?></p>
-                    <?= sk_action($featured, $isLoggedIn, $myRegs, 'Đăng ký tham gia') ?>
-                </div>
-            </article>
-            <?php endif; ?>
-        </section>
+        <!-- Sự kiện nổi bật -->
+        <?php if ($featured): $d = strtotime($featured['date']); ?>
+        <article class="sk-feature">
+            <div class="sk-feature__body">
+                <span class="sk-feature__flag"><i class="fa-solid fa-star"></i> Nổi bật</span>
+                <h2><?= e($featured['title']) ?></h2>
+                <span class="sk-tag"><?= e($featured['category']) ?></span>
+                <p class="sk-meta"><i class="fa-regular fa-clock"></i> <?= e($featured['time']) ?></p>
+                <p class="sk-meta"><i class="fa-solid fa-location-dot"></i> <?= e($featured['location']) ?></p>
+                <?= sk_action($featured, $isLoggedIn, $myRegs, 'Đặt vé ngay') ?>
+            </div>
+            <?= sk_poster($featured, 'sk-feature__art',
+                '<div class="sk-date"><b>' . date('d', $d) . '</b><span>' . $thang[(int)date('n', $d)] . '</span></div>') ?>
+        </article>
+        <?php endif; ?>
 
         <!-- Bộ lọc -->
         <section class="sk-filter" id="danh-sach">
@@ -150,7 +157,7 @@ return '<a class="sk-btn" href="' .
             </div>
         </section>
 
-        <!-- Danh sách -->
+        <!-- Danh sách: 4 sự kiện mỗi hàng -->
         <section class="sk-list">
             <?php if (!$shown): ?>
                 <div class="sk-empty">
@@ -161,33 +168,34 @@ return '<a class="sk-btn" href="' .
             <?php endif; ?>
 
             <?php foreach ($shown as $ev):
-                $d = strtotime($ev['date']);
+                $d    = strtotime($ev['date']);
                 $left = $ev['capacity'] - $ev['registered'];
-                $pct = $ev['capacity'] > 0 ? min(100, round($ev['registered'] / $ev['capacity'] * 100)) : 0;
+                $pct  = $ev['capacity'] > 0 ? min(100, round($ev['registered'] / $ev['capacity'] * 100)) : 0;
+
+                $badges = '';
+                if     ($ev['status'] === 'past')  $badges = '<span class="sk-state">Đã kết thúc</span>';
+                elseif ($ev['status'] === 'today') $badges = '<span class="sk-state sk-state--live">Diễn ra hôm nay</span>';
+                elseif ($ev['full'])               $badges = '<span class="sk-state">Hết chỗ</span>';
+                elseif ($left <= 10)               $badges = '<span class="sk-state sk-state--warn">Còn ' . $left . ' chỗ</span>';
+
+                $inner = '<div class="sk-date"><b>' . date('d', $d) . '</b><span>' . $thang[(int)date('n', $d)] . '</span></div>'
+                       . ($badges !== '' ? '<div class="sk-badges">' . $badges . '</div>' : '');
             ?>
             <article class="sk-card sk-card--<?= $ev['status'] ?>">
-                <div class="sk-card__date">
-                    <b><?= date('d', $d) ?></b>
-                    <span><?= $thang[(int)date('n', $d)] ?> <?= date('Y', $d) ?></span>
-                </div>
-                <div class="sk-card__body">
-                    <div class="sk-card__top">
-                        <span class="sk-tag"><?= e($ev['category']) ?></span>
-                        <?php if ($ev['status'] === 'past'): ?><span class="sk-state">Đã kết thúc</span>
-                        <?php elseif ($ev['status'] === 'today'): ?><span class="sk-state sk-state--live">Diễn ra hôm nay</span>
-                        <?php elseif ($ev['full']): ?><span class="sk-state">Hết chỗ</span>
-                        <?php elseif ($left <= 10): ?><span class="sk-state sk-state--warn">Còn <?= $left ?> chỗ</span><?php endif; ?>
-                    </div>
-                    <h3><?= e($ev['title']) ?></h3>
-                    <p class="sk-card__desc"><?= e($ev['desc']) ?></p>
-                    <p class="sk-meta"><i class="fa-regular fa-clock"></i> <?= e($ev['time']) ?></p>
-                    <p class="sk-meta"><i class="fa-solid fa-location-dot"></i> <?= e($ev['location']) ?></p>
+                <?= sk_poster($ev, '', $inner) ?>
 
-                    <div class="sk-bar" title="<?= $ev['registered'] ?>/<?= $ev['capacity'] ?> đã đăng ký">
+                <div class="sk-card__body">
+                    <span class="sk-tag"><?= e($ev['category']) ?></span>
+                    <h3><?= e($ev['title']) ?></h3>
+                    <p class="sk-meta"><i class="fa-regular fa-clock"></i> <?= e($ev['time']) ?>, <?= date('d/m/Y', $d) ?></p>
+                    <p class="sk-meta"><i class="fa-solid fa-location-dot"></i> <?= e($ev['location']) ?></p>
+                </div>
+
+                <div class="sk-card__foot">
+                    <div class="sk-bar <?= $pct >= 80 ? 'is-warn' : '' ?>" title="<?= $ev['registered'] ?>/<?= $ev['capacity'] ?> đã đăng ký">
                         <span style="width:<?= $pct ?>%"></span>
                     </div>
                     <p class="sk-bar__label"><?= $ev['registered'] ?>/<?= $ev['capacity'] ?> người đã đăng ký</p>
-
                     <?= sk_action($ev, $isLoggedIn, $myRegs) ?>
                 </div>
             </article>

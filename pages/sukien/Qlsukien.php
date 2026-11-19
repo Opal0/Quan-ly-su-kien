@@ -70,8 +70,8 @@ $statusLabel = [
                 <i class="fa-solid fa-music ql-note ql-note--2"></i>
             </div>
             <div class="ql-banner__text">
-                <h1>Quản lý sự kiện âm nhạc</h1>
-                <p>Theo dõi và quản lý các sự kiện <span aria-hidden="true">✦</span></p>
+                <h1>Đăng và cập nhật sự kiện</h1>
+                <p>Theo dõi các sự kiện <span aria-hidden="true">✦</span></p>
             </div>
             <div class="ql-banner__actions">
                 <a class="ql-btn ql-btn--ghost" href="sukien.php"><i class="fa-solid fa-eye"></i> Trang người dùng</a>
