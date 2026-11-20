@@ -94,7 +94,7 @@ $dsYeuCau = $db->query("
         <td data-label="Người dùng"><?= e($r['HoTen']) ?></td>
         <td data-label="Email"><?= e($r['Email']) ?></td>
         //- nl2br(): Chuyển \n thành <br> để giữ định dạng xuống dòng khi hiển thị văn bản trên website.
-        <td data-label="Lý do" class="cell-reason"><?= nl2br(e($r['Gioithieu'])) ?></td>
+        <td data-label="Lý do" class="cell-reason"><?= nl2br(e($r['LyDo'])) ?></td>
         <td data-label="Ngày gửi"><?= e($r['NgayGui']) ?></td>
         <td data-label="Xử lý">
           <form method="post" class="inline-actions">
