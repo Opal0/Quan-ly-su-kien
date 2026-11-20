@@ -34,7 +34,7 @@ img { max-width: 100%; height: auto; }
     justify-content: flex-end;
     margin-top: 20px;
 }
-#update-info, #update-password,#login-button,#register-button,#organizer-button {
+#update-info, #update-password,#login-button,#register-button,#organizer-button,#save-change {
     font-weight: bold;
     background-color: rgb(76, 142, 183);
     color: white;
@@ -52,7 +52,7 @@ img { max-width: 100%; height: auto; }
     box-shadow: 0 2px 12px rgba(0,0,0,.08);
     margin: 3px auto;
 }
-.account-title {
+.account-title,.infor-title {
     text-align: center;
     margin-bottom: 20px;
     font-size: clamp(20px, 4vw, 24px);   /* co giãn theo màn hình */
