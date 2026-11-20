@@ -36,17 +36,17 @@ $taiKhoan = $stUser->fetch(PDO::FETCH_ASSOC);
 
             <div class="form-row">
                 <label>Họ và tên</label>
-                <input type="text" value="<?= $taiKhoan['HoTen'] ?>" readonly>
+                <input type="text" value="<?= e($taiKhoan['HoTen']) ?>" readonly>
             </div>
 
             <div class="form-row">
                 <label>Email</label>
-                <input type="email" value="<?= $taiKhoan['Email'] ?>" readonly>
+                <input type="email" value="<?= e($taiKhoan['Email']) ?>" readonly>
             </div>
 
             <div class="form-row">
                 <label>Số điện thoại</label>
-                <input type="text" value="<?= !empty($taiKhoan['SoDienThoai']) ? $taiKhoan['SoDienThoai'] : 'Chưa cập nhật' ?>" readonly>
+                <input type="text" value="<?= !empty(e($taiKhoan['SoDienThoai'])) ? $taiKhoan['SoDienThoai'] : 'Chưa cập nhật' ?>" readonly>
             </div>
 
             <div class="form-button">
