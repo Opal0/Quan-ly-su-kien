@@ -31,6 +31,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                ->execute([password_hash($mk, PASSWORD_DEFAULT), currentUser()['id']]);
             session_regenerate_id(true);
             $ok = true;
+            ghiHoatDong(
+                    $conn, $id,
+                    'doi_mat_khau' ,
+                    'Thực hiện bởi user ' . SESSION['user_id']
+                );
         }
     }
 }
