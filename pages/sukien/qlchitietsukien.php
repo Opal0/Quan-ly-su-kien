@@ -267,7 +267,7 @@ foreach ($registrations as $r) {
             </p>
         </div>
 
-        <a href="Qlsukien(1).php" class="back-btn">
+        <a href="Qlsukien.php" class="back-btn">
             <i class="fa-solid fa-arrow-left"></i>
             Quay lại quản lý sự kiện
         </a>
