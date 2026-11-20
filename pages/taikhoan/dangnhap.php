@@ -54,7 +54,6 @@ require __DIR__ . '/../../components/header.php';
     <form class="auth-card" method="post">
         <h2 class="auth-title">Đăng nhập</h2>
         <?php if (isset($_GET['registered'])): ?><p class="alert success">Đăng ký thành công, hãy đăng nhập.</p><?php endif; ?>
-        <?php if (isset($_GET['reset'])): ?><p class="alert success">Đặt lại mật khẩu thành công, hãy đăng nhập.</p><?php endif; ?>
         <?php if (isset($_GET['loggedout'])): ?><p class="alert success">Bạn đã đăng xuất.</p><?php endif; ?>
         <?php foreach ($errors as $er): ?><p class="alert error"><?= e($er) ?></p><?php endforeach; ?>
         <?= csrfField() ?>
@@ -69,7 +68,6 @@ require __DIR__ . '/../../components/header.php';
             <input type="password" id="matkhau" name="matkhau" required>
         </div>
 
-        <p class="form-link" style="text-align:right;margin:0"><a href="quenmatkhau.php">Quên mật khẩu?</a></p>
         <div class="form-button">
             <button class="btn" id="login-button" type="submit">Đăng nhập</button>
         </div>

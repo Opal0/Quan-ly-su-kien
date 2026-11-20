@@ -10,38 +10,15 @@ $stUser = $db->prepare('SELECT ID, HoTen, Email, SoDienThoai FROM nguoidung WHER
 $stUser->execute([$userId]);
 $taiKhoan = $stUser->fetch(PDO::FETCH_ASSOC);
 
-if (!$taiKhoan) {
-    logoutUser();
-    header('Location: ' . BASE_URL . '/pages/taikhoan/dangnhap.php');
-    exit;
-}
-
-$stEvents = $db->prepare('
-    SELECT
-        dk.NgayDangKy,
-        dk.TrangThai AS TrangThaiDangKy,
-        dk.MaVe,
-        dk.TrangThaiCheckIn,
-        sk.TenSuKien,
-        sk.ThoiGianBatDau
-    FROM dangkysukien dk
-    INNER JOIN sukien sk ON dk.ID_SuKien = sk.ID
-    WHERE dk.ID_NguoiDung = ?
-    ORDER BY dk.NgayDangKy DESC
-');
-$stEvents->execute([$userId]);
-$events = $stEvents->fetchAll(PDO::FETCH_ASSOC);
-
-$pageTitle = 'Tài khoản | Musicforlife';
 ?>
 <!DOCTYPE html>
 <html lang="vi">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title><?= e($pageTitle) ?></title>
-    <link rel="stylesheet" href="<?= BASE_URL ?>/pages/taikhoan/taikhoan.css?v=2">
+    <title>Tài khoản của tôi</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css">
+    <link rel="stylesheet" href="<?= BASE_URL ?>/pages/taikhoan/taikhoan.css?v=2">
 </head>
 <body>
     <?php
@@ -59,17 +36,17 @@ $pageTitle = 'Tài khoản | Musicforlife';
 
             <div class="form-row">
                 <label>Họ và tên</label>
-                <input type="text" value="<?= e($taiKhoan['HoTen']) ?>" readonly>
+                <input type="text" value="<?= $taiKhoan['HoTen'] ?>" readonly>
             </div>
 
             <div class="form-row">
                 <label>Email</label>
-                <input type="email" value="<?= e($taiKhoan['Email']) ?>" readonly>
+                <input type="email" value="<?= $taiKhoan['Email'] ?>" readonly>
             </div>
 
             <div class="form-row">
                 <label>Số điện thoại</label>
-                <input type="text" value="<?= !empty($taiKhoan['SoDienThoai']) ? e($taiKhoan['SoDienThoai']) : 'Chưa cập nhật' ?>" readonly>
+                <input type="text" value="<?= !empty($taiKhoan['SoDienThoai']) ? $taiKhoan['SoDienThoai'] : 'Chưa cập nhật' ?>" readonly>
             </div>
 
             <div class="form-button">

@@ -9,7 +9,7 @@ $st = $db->prepare("SELECT * FROM thongbao WHERE ID_NguoiDung = ? ORDER BY NgayT
 $st->execute([$uid]);
 $dsThongBao = $st->fetchAll();
 
-// Đánh dấu đã đọc sau khi đã lấy danh sách (để vẫn thấy cái nào là "mới")
+// Đánh dấu đã đọc sau khi đã lấy danh sách 
 $db->prepare("UPDATE thongbao SET DaDoc = 1 WHERE ID_NguoiDung = ? AND DaDoc = 0")
    ->execute([$uid]);
 
@@ -52,16 +52,16 @@ function noiDungThongBao(array $tb): array
         <h2 style="text-align: center; color: white;">Thông báo</h2>
 
         <?php if (!$dsThongBao): ?>
-            <p>Bạn chưa có thông báo nào.</p>
+            <p style="color: white;">Bạn chưa có thông báo nào.</p>
         <?php endif; ?>
 
         <?php foreach ($dsThongBao as $tb): ?>
             <?php [$tieuDe, $noiDung] = noiDungThongBao($tb); ?>
             <div style="background-color: #f9f9f9; padding:10px; margin-bottom:8px; <?= !$tb['DaDoc'] ? 'background:#fff8e1;' : '' ?>">
-                <b><?= e($tieuDe) ?></b>
+                <b><?= $tieuDe ?></b>
                 <?php if (!$tb['DaDoc']): ?><span style="color:red">(mới)</span><?php endif; ?>
-                <p><?= nl2br(e($noiDung)) ?></p>
-                <small><?= e(date('d/m/Y H:i', strtotime($tb['NgayTao']))) ?></small>
+                <p><?= nl2br($noiDung) ?></p>
+                <small><?= date('d/m/Y H:i', strtotime($tb['NgayTao'])) ?></small>
 
                 <?php if ($tb['LoaiThongBao'] === 'organizer_duyet' && currentRole() === 'organizer'): ?>
                     <p><a href="<?= BASE_URL ?>/pages/sukien/quanly.php">Vào khu vực nhà tổ chức →</a></p>

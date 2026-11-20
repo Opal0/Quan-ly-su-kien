@@ -25,7 +25,7 @@ if (currentRole() === 'user' && $_SERVER['REQUEST_METHOD'] === 'POST') {
 
                 $st = $db->prepare("INSERT INTO yeucau_organizer (ID_NguoiDung, LyDo) VALUES (?, ?)");
                 $st->execute([$nguoiGui['id'], $lyDo]);
-
+                //Khi yêu cầu đc thêm vào csdl, mặc định trạng thái là 'cho_duyet'
                 // Thông báo cho tất cả admin (chữ hiển thị được viết trong thongbao.php)
                 guiThongBaoAdmin(
                     $db,
@@ -38,7 +38,6 @@ if (currentRole() === 'user' && $_SERVER['REQUEST_METHOD'] === 'POST') {
                 $ok = 'Da gui yeu cau. Vui long cho admin duyet.';
             } catch (Throwable $ex) {
                 if ($db->inTransaction()) $db->rollBack();
-                // Khi chạy thật nên dùng: error_log($ex->getMessage());
                 $loi = 'Loi gui yeu cau: ' . $ex->getMessage();
             }
         }
@@ -72,13 +71,9 @@ $dangCho = $ok !== '' || ($ycGanNhat && $ycGanNhat['TrangThai'] === 'cho_duyet')
 
     <?php if ($ok):  ?><p style="color:green"><?= e($ok) ?></p><?php endif; ?>
     <?php if ($loi): ?><p style="color:red"><?= e($loi) ?></p><?php endif; ?>
-
-    <?php if (currentRole() !== 'user'): ?>
-        <p>Tài khoản của bạn hiện là <b><?= e(currentRole()) ?></b>, không cần đăng ký thêm.</p>
-
-    <?php elseif ($dangCho): ?>
+    <?php if ($dangCho): ?>
         <?php if ($ycGanNhat): ?>
-            <p>Yêu cầu gửi lúc <?= e($ycGanNhat['NgayGui']) ?> đang <b>chờ admin duyệt</b>.</p>
+            <p style="color: white;">Yêu cầu gửi lúc <?= e($ycGanNhat['NgayGui']) ?> đang <b>chờ admin duyệt</b>.</p>
         <?php endif; ?>
 
     <?php else: ?>

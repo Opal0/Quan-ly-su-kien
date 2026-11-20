@@ -90,10 +90,10 @@ $dsYeuCau = $db->query("
       </tr>
       <?php foreach ($dsYeuCau as $r): ?>
       <tr>
-        //Ham e ben file auth.php dung de chuyen doi cac ki tu dac biet sang HTML entity
+        <!-- Ham e ben file auth.php dung de chuyen doi cac ki tu dac biet sang HTML entity -->
         <td data-label="Người dùng"><?= e($r['HoTen']) ?></td>
         <td data-label="Email"><?= e($r['Email']) ?></td>
-        //- nl2br(): Chuyển \n thành <br> để giữ định dạng xuống dòng khi hiển thị văn bản trên website.
+        <!-- nl2br(): Chuyển \n thành <br> để giữ định dạng xuống dòng khi hiển thị văn bản trên website. -->
         <td data-label="Lý do" class="cell-reason"><?= nl2br(e($r['LyDo'])) ?></td>
         <td data-label="Ngày gửi"><?= e($r['NgayGui']) ?></td>
         <td data-label="Xử lý">
