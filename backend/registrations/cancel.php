@@ -35,7 +35,8 @@ try {
             d.ID,
             d.TrangThai,
             d.TrangThaiCheckIn,
-            s.ThoiGianBatDau
+            s.ThoiGianBatDau,
+            s.TenSuKien
         FROM dangkysukien d
         JOIN sukien s ON d.ID_SuKien = s.ID
         WHERE d.ID = ?
@@ -80,7 +81,12 @@ try {
     ]);
 
     $db->commit();
-
+    ghiHoatDong(
+        $db,
+        (int)$_SESSION['user_id'],
+        'huy_ve',
+        "Hủy đặt vé cho sự kiện #{$dang_ky['TenSuKien']}"
+    );
     header('Location: ' . BASE_URL . '/pages/taikhoan/ve_cua_toi.php?cancelled=1');
     exit;
 
