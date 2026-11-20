@@ -1,6 +1,7 @@
 <?php 
 require_once __DIR__ . '/../config/database.php';
 require_once __DIR__ . '/../config/app.php';
+require_once __DIR__ . '/../includes/logger.php';
 if (session_status() === PHP_SESSION_NONE) { //Neu session chua duoc bat thi bat session
     session_start();
 }
@@ -63,23 +64,19 @@ function logoutUser(): void {
     if (ini_get('session.use_cookies')) {
         $p = session_get_cookie_params();
         setcookie(session_name(), '', 
-        time() - 42000, 
-        $p['path'], 
-        $p['domain'], 
-        $p['secure'], 
-        $p['httponly']);
+        time() - 42000);
     }
     session_destroy();
 }
 
-/* ---------- Chan truy cap ---------- *///xem lai
-// function safeRedirect(?string $url): string {
-//     // Chi cho phep redirect noi bo (bat dau bang BASE_URL)
-//     if ($url && strpos($url, BASE_URL . '/') === 0 && strpos($url, '//') !== 0) {
-//         return $url;
-//     }
-//     return BASE_URL . '/index.php';
-// }
+/* ---------- Chan truy cap ---------- */
+function safeRedirect(?string $url): string {
+    // Chi cho phep redirect noi bo (bat dau bang BASE_URL)
+    if ($url && strpos($url, BASE_URL . '/') === 0 && strpos($url, '//') !== 0) {
+        return $url;
+    }
+    return BASE_URL . '/index.php';
+}
 
 function requireLogin(): void {
     if (!isLoggedIn()) {

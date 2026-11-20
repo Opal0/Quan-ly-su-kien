@@ -10,7 +10,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && csrfValid()) {
 
     if ($idYc > 0 && in_array($hanhDong, ['duyet', 'tu_choi'], true)) {
         try {
-            $db->beginTransaction();
+            $db->beginTransaction();  //chi luu du lieu khi tat ca thao tac thanh cong
 
             // 1. Lấy yêu cầu đang chờ duyệt (khóa dòng để tránh duyệt 2 lần)
             $st = $db->prepare("SELECT ID_NguoiDung FROM yeucau_organizer WHERE ID = ? AND TrangThai = 'cho_duyet' FOR UPDATE");
@@ -33,20 +33,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && csrfValid()) {
                        ->execute([$row['ID_NguoiDung']]);
 
                     guiThongBao($db, (int)$row['ID_NguoiDung'],
-                        'Yêu cầu làm nhà tổ chức đã được duyệt',
-                        'Chúc mừng! Tài khoản của bạn đã trở thành nhà tổ chức. Bạn có thể bắt đầu đăng sự kiện.',
+                        'Yêu cầu của bạn đã được duyệt',
+                        'Xin chúc mừng! Tài khoản của bạn hiện đã trở thành nhà tổ chức. Bạn có thể bắt đầu đăng sự kiện.',
                         'organizer_duyet');
                 } else {
                     guiThongBao($db, (int)$row['ID_NguoiDung'],
-                        'Yêu cầu làm nhà tổ chức bị từ chối',
+                        'Yêu cầu của bạn đã bị từ chối',
                         'Rất tiếc, yêu cầu của bạn chưa được chấp nhận. Bạn có thể gửi lại yêu cầu mới với thông tin đầy đủ hơn.',
                         'organizer_tuchoi');
                 }
             }
             $db->commit();
         } catch (Throwable $ex) {
+          //Neu co loi/ngoai le xay ra ma dang thuc hien thao tac thi hoan tac lai tat ca, khong luu
             if ($db->inTransaction()) $db->rollBack();
-            // Khi chạy thật nên đổi thành: error_log($ex->getMessage()); exit('Có lỗi xảy ra, vui lòng thử lại.');
             exit('Loi xu ly yeu cau: ' . $ex->getMessage() . ' (dong ' . $ex->getLine() . ' - ' . basename($ex->getFile()) . ')');
         }
     }
@@ -69,8 +69,8 @@ $dsYeuCau = $db->query("
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Duyệt nhà tổ chức</title>
 <link rel="stylesheet" href="../../assets/css/style.css">
-<link rel="stylesheet" href="../../pages/admin/admin.css">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css">
+<link rel="stylesheet" href="../../pages/admin/admin.css">
 </head>
 <body>
 <?php require __DIR__ . '/../../components/top.php'; ?>
@@ -90,8 +90,10 @@ $dsYeuCau = $db->query("
       </tr>
       <?php foreach ($dsYeuCau as $r): ?>
       <tr>
+        //Ham e ben file auth.php dung de chuyen doi cac ki tu dac biet sang HTML entity
         <td data-label="Người dùng"><?= e($r['HoTen']) ?></td>
         <td data-label="Email"><?= e($r['Email']) ?></td>
+        //- nl2br(): Chuyển \n thành <br> để giữ định dạng xuống dòng khi hiển thị văn bản trên website.
         <td data-label="Lý do" class="cell-reason"><?= nl2br(e($r['Gioithieu'])) ?></td>
         <td data-label="Ngày gửi"><?= e($r['NgayGui']) ?></td>
         <td data-label="Xử lý">

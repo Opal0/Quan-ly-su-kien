@@ -13,6 +13,7 @@ function ghiTruyCap(PDO $conn): void {
             "INSERT INTO nhatky_truycap (ID_NguoiDung, DiaChiIP, Trang, PhuongThuc, TrinhDuyet)
              VALUES (?, ?, ?, ?, ?)"
         );
+        //mb_substr dung de cat chuoi
         $st->execute([
             $_SESSION['user_id'] ?? null,
             layIP(),
@@ -20,7 +21,9 @@ function ghiTruyCap(PDO $conn): void {
             $_SERVER['REQUEST_METHOD'] ?? 'GET',
             mb_substr($_SERVER['HTTP_USER_AGENT'] ?? '', 0, 255),
         ]);
-    } catch (Throwable $e) { /* log lỗi không được làm hỏng trang */ }
+    } catch (Throwable $e) {
+            error_log("Lỗi ghi nhật ký truy cập: " . $e->getMessage());
+    }
 }
 
 function ghiHoatDong(PDO $conn, int $uid, string $hanhDong, ?string $moTa = null): void {

@@ -2,7 +2,7 @@
 require_once __DIR__ . '/../../config/database.php';
 require_once __DIR__ . '/../../includes/auth.php';
 requireAdmin();
-
+//tk = tài khoản mà admin bấm vào
 $id = (int)($_GET['id'] ?? 0);
 $u = $conn->prepare("SELECT ID, HoTen, Email, VaiTro, TrangThai FROM nguoidung WHERE ID = ?");
 $u->execute([$id]);
@@ -10,12 +10,12 @@ $tk = $u->fetch();
 if (!$tk) { http_response_code(404); exit('Không tìm thấy tài khoản'); }
 
 $hd = $conn->prepare("SELECT HanhDong, MoTa, DiaChiIP, ThoiGian FROM nhatky_hoatdong
-                      WHERE ID_NguoiDung = ? ORDER BY ThoiGian DESC LIMIT 100");
+                      WHERE ID_NguoiDung = ? ORDER BY ThoiGian DESC LIMIT 50");
 $hd->execute([$id]);
 $dsHoatDong = $hd->fetchAll();
-
+//tc=truy cap
 $tc = $conn->prepare("SELECT DiaChiIP, Trang, PhuongThuc, ThoiGian FROM nhatky_truycap
-                      WHERE ID_NguoiDung = ? ORDER BY ThoiGian DESC LIMIT 100");
+                      WHERE ID_NguoiDung = ? ORDER BY ThoiGian DESC LIMIT 50");
 $tc->execute([$id]);
 $dsTruyCap = $tc->fetchAll();
 
@@ -48,10 +48,8 @@ $dsIP = $ips->fetchAll();
     Trạng thái: <span class="badge badge-<?= e($tk['TrangThai']) ?>"><?= e($tk['TrangThai']) ?></span>
   </p>
 
-  <?php if (isset($_GET['ok'])): ?>
+  <?php if (isset($_GET['ok'])): ?> //xem lại
     <p class="alert alert-success">Đã cập nhật trạng thái tài khoản.</p>
-  <?php elseif (($_GET['loi'] ?? '') === 'tu_khoa'): ?>
-    <p class="alert alert-error">Bạn không thể tự khoá tài khoản của mình.</p>
   <?php elseif (($_GET['loi'] ?? '') === 'khoa_admin'): ?>
     <p class="alert alert-error">Không thể khoá tài khoản admin.</p>
   <?php endif; ?>
@@ -85,7 +83,7 @@ $dsIP = $ips->fetchAll();
     </table>
   </div>
 
-  <h2>Nhật ký hoạt động (100 gần nhất)</h2>
+  <h2>Nhật ký hoạt động (50 lần gần nhất)</h2>
   <div class="table-wrap">
     <table class="table-stack">
       <tr><th>Thời gian</th><th>Hành động</th><th>Mô tả</th><th>IP</th></tr>
@@ -100,7 +98,7 @@ $dsIP = $ips->fetchAll();
     </table>
   </div>
 
-  <h2>Lịch sử truy cập (100 gần nhất)</h2>
+  <h2>Lịch sử truy cập (50 lần gần nhất)</h2>
   <div class="table-wrap">
     <table class="table-stack">
       <tr><th>Thời gian</th><th>Trang</th><th>Method</th><th>IP</th></tr>

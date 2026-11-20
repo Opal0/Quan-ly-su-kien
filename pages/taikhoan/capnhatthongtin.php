@@ -31,7 +31,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $errors[] = 'Số điện thoại không hợp lệ (ví dụ: 0912345678).';
     }
 
-    // Email không được trùng với người khác
+    // Nếu tìm thấy Email từ user có id khác với user hiện tại thì báo lỗi
     if (!$errors) {
         $stmt = $db->prepare('SELECT ID FROM nguoidung WHERE Email = :email AND ID <> :id');
         $stmt->execute([':email' => $email, ':id' => $userId]);
@@ -84,7 +84,7 @@ if (!$thongTin) {
     <?php require __DIR__ . '/../../components/top.php';
     require __DIR__ . '/../../components/header.php';?>
 
-    <main class="main-content" style="max-width:600px;margin:30px auto;padding:0 16px;">
+    <main class="main-content capnhatthongtin";>
         <h2>Thông tin tài khoản</h2>
 
         <?php if ($success): ?>
