@@ -85,7 +85,7 @@ if (!$thongTin) {
     require __DIR__ . '/../../components/header.php';?>
 
     <main class="main-content capnhatthongtin";>
-        <h2>Thông tin tài khoản</h2>
+        <h2 class="infor-title">Thông tin tài khoản</h2>
 
         <?php if ($success): ?>
             <p style="color:green;"><?= e($success) ?></p>
@@ -96,7 +96,7 @@ if (!$thongTin) {
 
         <!-- Hiển thị thông tin hiện tại / mới nhất -->
         <section class="current-info">
-            <h3>Thông tin hiện tại</h3>
+            <h3 class="infor-title">Thông tin hiện tại</h3>
             <ul>
                 <li><b>Họ tên:</b> <?= e($thongTin['HoTen']) ?></li>
                 <li><b>Email:</b> <?= e($thongTin['Email']) ?></li>
@@ -124,7 +124,7 @@ if (!$thongTin) {
                     <input type="tel" name="so_dien_thoai"
                         value="<?= e($_POST['so_dien_thoai'] ?? $thongTin['SoDienThoai']) ?>"></label>
                 </p>
-                <button type="submit">Lưu thay đổi</button>
+                <button id="save-change" type="submit">Lưu thay đổi</button>
             </form>
         </section>
     </main>
