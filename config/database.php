@@ -6,7 +6,7 @@
 
 try {
     $conn = new PDO(
-        "mysql:host=localhost;dbname=music4life2;charset=utf8mb4",
+        "mysql:host=localhost;dbname=music4life;charset=utf8mb4",
         "root",
         ""
     );
