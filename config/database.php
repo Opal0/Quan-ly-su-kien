@@ -1,4 +1,3 @@
-//da doc
 <?php
 // $host = "localhost";
 // $dbname = "music4life2";
