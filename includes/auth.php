@@ -10,7 +10,7 @@ function e(?string $s): string { //Chuyen doi ky tu dac biet sang HTML entity
     return htmlspecialchars((string)$s, ENT_QUOTES, 'UTF-8');
 }
 
-/* ---------- CSRF ---------- */ //xem lai
+/* ---------- CSRF ---------- */ 
 function csrfToken(): string {
     if (empty($_SESSION['csrf'])) {
         $_SESSION['csrf'] = bin2hex(random_bytes(32));
@@ -60,6 +60,12 @@ function currentRole(): string {
 }
 
 function logoutUser(): void {
+    ghiHoatDong(
+        $conn=getDB(),
+        (int)$_SESSION['user_id'],
+        'dang_xuat',
+        "Đăng xuất khỏi hệ thống"
+    );
     $_SESSION = [];
     if (ini_get('session.use_cookies')) {
         $p = session_get_cookie_params();
