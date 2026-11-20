@@ -1,10 +1,11 @@
 <?php
 /**
- * Xử lý dữ liệu cho trang QUẢN TRỊ sự kiện (qlsukien.php).
- * - GET : nạp danh sách, thống kê, lọc, phân trang
- * - POST: thêm / sửa / xóa sự kiện (qua AJAX, trả về JSON)
+ * Xử lý dữ liệu cho trang quản lý sự kiện của ORGANIZER (qlsukien.php).
+ * Thêm / sửa / xóa KHÔNG áp dụng ngay: chỉ tạo yêu cầu trong bảng yeucau_sukien,
+ * admin duyệt ở pages/admin/duyetsukien.php thì bảng sukien mới thay đổi.
  *
- * CSDL music4life: sukien, danhmuc, dangkysukien.
+ * - GET : nạp danh sách sự kiện của tôi, thống kê, lọc, phân trang, các yêu cầu của tôi
+ * - POST: save / delete / cancel_request (AJAX, trả về JSON)
  * Được nạp từ qlsukien.php (sau session_start và tạo CSRF token).
  */
 require_once __DIR__ . '/../../includes/auth.php';
@@ -18,8 +19,6 @@ const QL_PER_PAGE         = 8;
 const QL_UPLOAD_SUBDIR    = 'assets/uploads/sukien/';
 
 /* ---------- Hàm hỗ trợ ---------- */
-if (!function_exists('e')) { function e($s) { return htmlspecialchars((string)$s, ENT_QUOTES, 'UTF-8'); } }
-
 function ql_url(array $over = []): string {
     $q = array_merge($_GET, $over);
     $q = array_filter($q, fn($v) => $v !== '' && $v !== null);
@@ -195,10 +194,15 @@ if ($forbidden) {
     return;
 }
 
+$uid = (int)currentUser()['id'];
 $pdo = getDB();
 
+// "Sự kiện của tôi" = sự kiện có yêu cầu THÊM của tôi đã được admin duyệt (không cần sửa bảng sukien)
+$own = "EXISTS (SELECT 1 FROM yeucau_sukien y WHERE y.ID_SuKien = s.ID AND y.ID_NguoiGui = :uid
+                  AND y.LoaiYeuCau = 'them' AND y.TrangThai = 'da_duyet')";
+
 /* =====================================================
-   POST: thêm / sửa / xóa (AJAX -> JSON)
+   POST: gửi yêu cầu thêm / sửa / xóa, rút yêu cầu (AJAX -> JSON)
    ===================================================== */
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
@@ -593,6 +597,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 /* =====================================================
    GET: nạp dữ liệu hiển thị
    ===================================================== */
+$pendingMap = [];
 try {
 
     // Quản trị thấy TẤT CẢ sự kiện
@@ -644,6 +649,7 @@ foreach ($events as &$ev) {
     $ev['capacity']    = (int)$ev['capacity'];
     $ev['registered']  = (int)$ev['registered'];
     $ev['desc']        = (string)$ev['desc'];
+    $ev['pending']     = $pendingMap[$ev['id']] ?? null;   // 'sua' | 'xoa' | null (view: hiện "Chờ duyệt", khóa nút sửa/xóa)
 
     $startDate = substr(
         (string)$ev['start_at'],
