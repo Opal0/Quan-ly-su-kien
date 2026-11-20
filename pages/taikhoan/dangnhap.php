@@ -29,6 +29,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                        ->execute([password_hash($mk, PASSWORD_DEFAULT), $u['ID']]);
             }
             loginUser($u);
+            ghiHoatDong(
+                    getDB(), $u['ID'],
+                    'dang_nhap' ,
+                    'Đăng nhập vào hệ thống'
+            );
             // Admin vao trang quan ly neu khong co trang dich cu the
             $default = $u['VaiTro'] === 'admin' ? BASE_URL . '/pages/admin/duyetdoivaitro.php' : BASE_URL . '/pages/sukien/sukien.php';
             header('Location: ' . ($redirect !== '' ? safeRedirect($redirect) : $default));
