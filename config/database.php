@@ -1,6 +1,6 @@
 <?php
 // $host = "localhost";
-// $dbname = "music4life2";
+// $dbname = "music4life";
 // $username = "root";
 // $password = "";
 
