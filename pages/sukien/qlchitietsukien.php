@@ -269,7 +269,7 @@ foreach ($registrations as $r) {
 
         <a href="Qlsukien.php" class="back-btn">
             <i class="fa-solid fa-arrow-left"></i>
-            Quay lại quản lý sự kiện
+            Quay lại đăng và cập nhật sự kiện
         </a>
 
     </div>
