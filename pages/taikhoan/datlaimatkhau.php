@@ -49,6 +49,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
                 unset($_SESSION['reset_email']);
                 header('Location: dangnhap.php?reset=1');
+                ghiHoatDong(
+                    $conn, $id,
+                    'dat_lai_mat_khau' ,
+                    'Thực hiện bởi user ' . SESSION['user_id']
+                );
                 exit;
             }
         }
