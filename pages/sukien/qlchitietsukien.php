@@ -394,7 +394,7 @@ foreach ($registrations as $r) {
 
         <h2>
             <i class="fa-solid fa-list"></i>
-            Danh sách người tham gia
+            Danh sách người đăng ký
         </h2>
 
         <?php if (count($registrations) > 0): ?>
