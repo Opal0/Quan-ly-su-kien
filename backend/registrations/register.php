@@ -251,6 +251,13 @@ try {
 
     // 9. Hoàn tất giao dịch database
     $db->commit();
+    if ($totalPrice > 0) {
+        $moTaLog = "Đặt $quantity vé  (mã vé $ticketCode) cho sự kiện #{$event['TenSuKien']}";
+    } else {
+        $moTaLog = "Đăng ký $quantity vé miễn phí (đăng ký #$bookingId, mã vé $ticketCode) cho sự kiện #{$event['TenSuKien']}";
+    }
+
+    ghiHoatDong($db, $userId, 'mua_ve', $moTaLog);
 
     // 10. Chuyển trang
     if ($totalPrice > 0) {
