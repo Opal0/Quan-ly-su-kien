@@ -263,7 +263,7 @@ foreach ($registrations as $r) {
             </h1>
 
             <p>
-                Quản lý người tham gia sự kiện
+                Theo dỗi người tham gia sự kiện
             </p>
         </div>
 

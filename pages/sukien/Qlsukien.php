@@ -283,52 +283,6 @@ $requestStatusLabel = [
             <?php endif; ?>
         </section>
 
-        <!-- ===== Yêu cầu của tôi ===== -->
-        <section class="ql-card ql-card--list" aria-label="Yêu cầu của tôi">
-            <h2 class="ql-card__title"><span aria-hidden="true">✦</span> Yêu cầu của tôi</h2>
-
-            <?php if (!$myRequests): ?>
-                <p class="ql-count">Bạn chưa gửi yêu cầu nào.</p>
-            <?php else: ?>
-            <div class="ql-tablewrap">
-                <table class="ql-table">
-                    <thead>
-                        <tr>
-                            <th>Loại</th>
-                            <th>Sự kiện</th>
-                            <th>Ngày gửi</th>
-                            <th>Trạng thái</th>
-                            <th class="ql-center">Thao tác</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                    <?php foreach ($myRequests as $rq): ?>
-                        <tr>
-                            <td data-label="Loại"><?= e($rq['type_label']) ?></td>
-                            <td data-label="Sự kiện"><strong><?= e($rq['title']) ?></strong></td>
-                            <td data-label="Ngày gửi"><?= e(date('d/m/Y H:i', strtotime($rq['created_at']))) ?></td>
-                            <td data-label="Trạng thái">
-                                <span class="ql-badge ql-badge--<?= e($rq['status']) ?>"><?= e($requestStatusLabel[$rq['status']] ?? $rq['status']) ?></span>
-                                <?php if ($rq['status'] === 'tu_choi' && $rq['reason'] !== ''): ?>
-                                    <small class="ql-reason">Lý do: <?= e($rq['reason']) ?></small>
-                                <?php endif; ?>
-                            </td>
-                            <td class="ql-center ql-actions">
-                                <?php if ($rq['status'] === 'cho_duyet'): ?>
-                                    <button type="button" class="ql-act ql-act--del js-cancel"
-                                            data-id="<?= $rq['id'] ?>" data-title="<?= e($rq['title']) ?>">
-                                        <i class="fa-solid fa-rotate-left"></i> Rút yêu cầu
-                                    </button>
-                                <?php endif; ?>
-                            </td>
-                        </tr>
-                    <?php endforeach; ?>
-                    </tbody>
-                </table>
-            </div>
-            <?php endif; ?>
-        </section>
-
         <!-- Thông báo nhanh -->
         <div class="ql-toasts" id="qlToasts" aria-live="polite"></div>
 
