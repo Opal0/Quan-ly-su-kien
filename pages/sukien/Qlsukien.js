@@ -189,7 +189,7 @@
   function setMode(ev) {
     const editing = !!ev;
     $('#qlFormTitle').textContent = editing ? 'Sửa sự kiện' : 'Thông tin sự kiện';
-    $('span', saveBtn).textContent = editing ? 'Cập nhật sự kiện' : 'Lưu sự kiện';
+    $('span', saveBtn).textContent = editing ? 'Cập nhật sự kiện' : 'Đăng sự kiện';
   }
 
   function resetForm(ev) {

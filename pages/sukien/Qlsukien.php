@@ -182,7 +182,7 @@ $requestStatusLabel = [
                 <div class="ql-form__foot">
                     <small class="ql-err ql-err--form" id="qlFormError" role="alert"></small>
                     <button type="button" class="ql-btn ql-btn--soft" id="qlReset"><i class="fa-solid fa-rotate-left"></i> Đặt lại</button>
-                    <button type="submit" class="ql-btn" id="qlSave"><i class="fa-regular fa-floppy-disk"></i> <span>Gửi duyệt</span></button>
+                    <button type="submit" class="ql-btn" id="qlSave"><i class="fa-regular fa-floppy-disk"></i> <span>Đăng sự kiện</span></button>
                 </div>
             </form>
         </section>
@@ -312,7 +312,7 @@ $requestStatusLabel = [
     <?php include ROOT_PATH . '/components/footer.php'; ?>
     <script src="../../assets/js/components.js"></script>
     <?php if (!$forbidden): ?>
-    <script src="Qlsukien.js?v=4"></script>
+    <script src="Qlsukien.js?v=5"></script>
     <script>
     // Rút lại yêu cầu đang chờ duyệt (token lấy từ csrfField() trong form, đúng tên field của auth.php)
     document.querySelectorAll('.js-cancel').forEach(function (btn) {
