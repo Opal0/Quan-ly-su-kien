@@ -50,8 +50,6 @@ $dsIP = $ips->fetchAll();
 
   <?php if (isset($_GET['ok'])): ?> //xem lại
     <p class="alert alert-success">Đã cập nhật trạng thái tài khoản.</p>
-  <?php elseif (($_GET['loi'] ?? '') === 'khoa_admin'): ?>
-    <p class="alert alert-error">Không thể khoá tài khoản admin.</p>
   <?php endif; ?>
 
   <?php if ($tk['VaiTro'] !== 'admin' && (int)$tk['ID'] !== (int)$_SESSION['user_id']): ?>
