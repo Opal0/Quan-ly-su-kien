@@ -1,15 +1,15 @@
 <?php
 require_once __DIR__ . '/../config/database.php';
 require_once __DIR__ . '/../config/app.php';
-if (session_status() === PHP_SESSION_NONE) {
+if (session_status() === PHP_SESSION_NONE) { //Neu session chua duoc bat thi bat session
     session_start();
 }
 
-function e(?string $s): string {
+function e(?string $s): string { //Chuyen doi ky tu dac biet sang HTML entity
     return htmlspecialchars((string)$s, ENT_QUOTES, 'UTF-8');
 }
 
-/* ---------- CSRF ---------- */
+/* ---------- CSRF ---------- */ //xem lai
 function csrfToken(): string {
     if (empty($_SESSION['csrf'])) {
         $_SESSION['csrf'] = bin2hex(random_bytes(32));
@@ -26,6 +26,13 @@ function csrfValid(): bool {
 
 /* ---------- Trang thai dang nhap ----------
    Session dung khoa phang: user_id, user_name, user_email, user_role */
+function loginUser(array $row): void {
+    session_regenerate_id(true);
+    $_SESSION['user_id']    = (int)($row['ID'] ?? 0);
+    $_SESSION['user_name']  = $row['HoTen']  ?? '';
+    $_SESSION['user_email'] = $row['Email']  ?? '';
+    $_SESSION['user_role']  = $row['VaiTro'] ?? 'user';
+}
 function isLoggedIn(): bool {
     return !empty($_SESSION['user_id']);
 }
@@ -44,15 +51,6 @@ function currentRole(): string {
 function isAdmin(): bool {
     return currentRole() === 'admin';
 }
-
-function loginUser(array $row): void {
-    session_regenerate_id(true);
-    $_SESSION['user_id']    = (int)($row['ID'] ?? 0);
-    $_SESSION['user_name']  = $row['HoTen']  ?? '';
-    $_SESSION['user_email'] = $row['Email']  ?? '';
-    $_SESSION['user_role']  = $row['VaiTro'] ?? 'user';
-}
-
 function logoutUser(): void {
     $_SESSION = [];
     if (ini_get('session.use_cookies')) {
