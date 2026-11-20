@@ -16,18 +16,18 @@ $back    = 'nguoidung_chitiet.php?id=' . $id;
 if (!in_array($hanhDong, ['khoa', 'mo'], true)) {
     exit('Hành động không hợp lệ');
 }
-if ($id === $adminId) {
-    header('Location: ' . $back . '&loi=tu_khoa'); exit;   // không cho tự khoá mình
-}
+// if ($id === $adminId) {
+//     header('Location: ' . $back . '&loi=tu_khoa'); exit;   // không cho tự khoá mình
+// }
 
 $st = $conn->prepare("SELECT VaiTro FROM nguoidung WHERE ID = ?");
 $st->execute([$id]);
 $target = $st->fetch();
 if (!$target) { http_response_code(404); exit('Không tìm thấy tài khoản'); }
 
-if ($target['VaiTro'] === 'admin') {
-    header('Location: ' . $back . '&loi=khoa_admin'); exit; // không cho khoá admin khác
-}
+// if ($target['VaiTro'] === 'admin') {
+//     header('Location: ' . $back . '&loi=khoa_admin'); exit; // không cho khoá admin khác
+// }
 
 $trangThaiMoi = $hanhDong === 'khoa' ? 'khoa' : 'hoat_dong';
 $conn->prepare("UPDATE nguoidung SET TrangThai = ? WHERE ID = ?")->execute([$trangThaiMoi, $id]);
