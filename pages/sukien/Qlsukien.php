@@ -1,21 +1,67 @@
 <?php
 session_start();
 
-// Toàn bộ xử lý dữ liệu nằm ở file riêng; file này chỉ hiển thị.
-// (Token CSRF dùng csrfToken()/csrfField() của auth.php, được nạp trong controller.)
 require_once __DIR__ . '/Qlsukien_controller.php';
 
-$statusLabel = [
-    'upcoming'  => 'Sắp diễn ra',
-    'today'     => 'Đang diễn ra',
-    'past'      => 'Đã kết thúc',
-    'cancelled' => 'Đã hủy',
-];
-$requestStatusLabel = [
-    'cho_duyet' => 'Chờ duyệt',
-    'da_duyet'  => 'Đã duyệt',
-    'tu_choi'   => 'Bị từ chối',
-];
+final class QlSukienView
+{
+    public const STATUS_LABELS = [
+        'upcoming'  => 'Sắp diễn ra',
+        'today'     => 'Đang diễn ra',
+        'past'      => 'Đã kết thúc',
+        'cancelled' => 'Đã hủy',
+    ];
+
+    public const STATUS_FILTER_LABELS = [
+        'all'       => 'Tất cả trạng thái',
+        'upcoming'  => 'Sắp diễn ra',
+        'today'     => 'Đang diễn ra',
+        'past'      => 'Đã kết thúc',
+        'cancelled' => 'Đã hủy',
+    ];
+
+    public const PERIOD_FILTER_LABELS = [
+        'all'   => 'Tất cả thời gian',
+        'today' => 'Hôm nay',
+        'week'  => '7 ngày tới',
+        'month' => 'Tháng này',
+    ];
+
+    public static function code(int $id): string
+    {
+        return 'SK' . str_pad((string)$id, 3, '0', STR_PAD_LEFT);
+    }
+
+    public static function barClass(int $pct): string
+    {
+        if ($pct >= 100) {
+            return 'is-full';
+        }
+        return $pct >= 80 ? 'is-warn' : '';
+    }
+
+    public static function dateTimeField(string $name, string $id, string $label, string $hourLabel, string $minuteLabel): string
+    {
+        return '
+                    <div class="ql-field ql-field--' . $name . '">
+                        <label for="' . $id . '">' . $label . ' <b>*</b></label>
+                        <div class="ql-dt" data-name="' . $name . '">
+                            <input type="hidden" name="' . $name . '">
+                            <div class="ql-dt__datebox">
+                                <input id="' . $id . '" class="ql-dt__date" type="text" inputmode="numeric" maxlength="10" placeholder="dd/mm/yyyy" autocomplete="off">
+                                <button type="button" class="ql-dt__cal" aria-label="Chọn ngày từ lịch"><i class="fa-regular fa-calendar"></i></button>
+                                <input class="ql-dt__native" type="date" tabindex="-1" aria-hidden="true">
+                            </div>
+                            <select class="ql-dt__h" aria-label="' . $hourLabel . '"></select>
+                            <span class="ql-dt__sep" aria-hidden="true">:</span>
+                            <select class="ql-dt__m" aria-label="' . $minuteLabel . '"></select>
+                        </div>
+                        <small class="ql-err" data-for="' . $name . '"></small>
+                    </div>';
+    }
+}
+
+extract((new QlSukienController())->handle());
 ?>
 <!DOCTYPE html>
 <html lang="vi">
@@ -44,15 +90,14 @@ $requestStatusLabel = [
     <main class="main-section ql">
 
     <?php if ($forbidden): ?>
-        <!-- Không có quyền -->
         <section class="ql-denied">
             <i class="fa-solid fa-lock"></i>
             <h1>Bạn không có quyền truy cập trang này</h1>
             <p>Trang quản lý sự kiện chỉ dành cho quản trị viên.</p>
             <?php if (!isLoggedIn()): ?>
-                <a class="ql-btn" href="<?= e(ql_base() . '/pages/taikhoan/dangnhap.php') ?>">Đăng nhập</a>
+                <a class="ql-btn" href="<?= e(QlUrl::base() . '/pages/taikhoan/dangnhap.php') ?>">Đăng nhập</a>
             <?php elseif (currentRole() === 'admin'): ?>
-                <a class="ql-btn" href="<?= e(ql_base() . '/pages/admin/duyetsukien.php') ?>">Đến trang duyệt sự kiện</a>
+                <a class="ql-btn" href="<?= e(QlUrl::base() . '/pages/admin/duyetsukien.php') ?>">Đến trang duyệt sự kiện</a>
             <?php else: ?>
                 <a class="ql-btn ql-btn--ghost" href="sukien.php">Về trang sự kiện</a>
             <?php endif; ?>
@@ -66,7 +111,6 @@ $requestStatusLabel = [
             </div>
         <?php endif; ?>
 
-        <!-- ===== Banner tiêu đề ===== -->
         <header class="ql-banner">
             <div class="ql-banner__art" aria-hidden="true">
                 <span class="ql-vinyl"></span>
@@ -83,7 +127,6 @@ $requestStatusLabel = [
             </div>
         </header>
 
-        <!-- ===== Form thông tin sự kiện ===== -->
         <section class="ql-card" id="qlFormCard" aria-labelledby="qlFormTitle">
             <h2 class="ql-card__title"><span aria-hidden="true">✦</span> <span id="qlFormTitle">Thông tin sự kiện</span></h2>
 
@@ -110,37 +153,8 @@ $requestStatusLabel = [
                         <small class="ql-err" data-for="category_id"></small>
                     </div>
 
-                    <div class="ql-field ql-field--start">
-                        <label for="fStart">Bắt đầu <b>*</b></label>
-                        <div class="ql-dt" data-name="start">
-                            <input type="hidden" name="start">
-                            <div class="ql-dt__datebox">
-                                <input id="fStart" class="ql-dt__date" type="text" inputmode="numeric" maxlength="10" placeholder="dd/mm/yyyy" autocomplete="off">
-                                <button type="button" class="ql-dt__cal" aria-label="Chọn ngày từ lịch"><i class="fa-regular fa-calendar"></i></button>
-                                <input class="ql-dt__native" type="date" tabindex="-1" aria-hidden="true">
-                            </div>
-                            <select class="ql-dt__h" aria-label="Giờ bắt đầu"></select>
-                            <span class="ql-dt__sep" aria-hidden="true">:</span>
-                            <select class="ql-dt__m" aria-label="Phút bắt đầu"></select>
-                        </div>
-                        <small class="ql-err" data-for="start"></small>
-                    </div>
-
-                    <div class="ql-field ql-field--end">
-                        <label for="fEnd">Kết thúc <b>*</b></label>
-                        <div class="ql-dt" data-name="end">
-                            <input type="hidden" name="end">
-                            <div class="ql-dt__datebox">
-                                <input id="fEnd" class="ql-dt__date" type="text" inputmode="numeric" maxlength="10" placeholder="dd/mm/yyyy" autocomplete="off">
-                                <button type="button" class="ql-dt__cal" aria-label="Chọn ngày từ lịch"><i class="fa-regular fa-calendar"></i></button>
-                                <input class="ql-dt__native" type="date" tabindex="-1" aria-hidden="true">
-                            </div>
-                            <select class="ql-dt__h" aria-label="Giờ kết thúc"></select>
-                            <span class="ql-dt__sep" aria-hidden="true">:</span>
-                            <select class="ql-dt__m" aria-label="Phút kết thúc"></select>
-                        </div>
-                        <small class="ql-err" data-for="end"></small>
-                    </div>
+                    <?= QlSukienView::dateTimeField('start', 'fStart', 'Bắt đầu', 'Giờ bắt đầu', 'Phút bắt đầu') ?>
+                    <?= QlSukienView::dateTimeField('end', 'fEnd', 'Kết thúc', 'Giờ kết thúc', 'Phút kết thúc') ?>
 
                     <div class="ql-field ql-field--loc">
                         <label for="fLoc">Địa điểm <b>*</b></label>
@@ -187,7 +201,6 @@ $requestStatusLabel = [
             </form>
         </section>
 
-        <!-- ===== Danh sách ===== -->
         <section class="ql-card ql-card--list" aria-label="Danh sách sự kiện">
             <form method="get" class="ql-filter" role="search">
                 <div class="ql-search">
@@ -200,7 +213,7 @@ $requestStatusLabel = [
                     <i class="fa-solid fa-filter"></i>
                     <label class="ql-sr" for="qlTt">Trạng thái</label>
                     <select id="qlTt" name="tt" data-autosubmit>
-                        <?php foreach (['all' => 'Tất cả trạng thái', 'upcoming' => 'Sắp diễn ra', 'today' => 'Đang diễn ra', 'past' => 'Đã kết thúc', 'cancelled' => 'Đã hủy'] as $k => $lb): ?>
+                        <?php foreach (QlSukienView::STATUS_FILTER_LABELS as $k => $lb): ?>
                             <option value="<?= $k ?>" <?= $tt === $k ? 'selected' : '' ?>><?= $lb ?></option>
                         <?php endforeach; ?>
                     </select>
@@ -210,7 +223,7 @@ $requestStatusLabel = [
                     <i class="fa-regular fa-calendar"></i>
                     <label class="ql-sr" for="qlTg">Thời gian</label>
                     <select id="qlTg" name="tg" data-autosubmit>
-                        <?php foreach (['all' => 'Tất cả thời gian', 'today' => 'Hôm nay', 'week' => '7 ngày tới', 'month' => 'Tháng này'] as $k => $lb): ?>
+                        <?php foreach (QlSukienView::PERIOD_FILTER_LABELS as $k => $lb): ?>
                             <option value="<?= $k ?>" <?= $tg === $k ? 'selected' : '' ?>><?= $lb ?></option>
                         <?php endforeach; ?>
                     </select>
@@ -243,11 +256,9 @@ $requestStatusLabel = [
                         </td></tr>
                     <?php endif; ?>
 
-                    <?php foreach ($shown as $ev):
-                        $barClass = $ev['pct'] >= 100 ? 'is-full' : ($ev['pct'] >= 80 ? 'is-warn' : '');
-                    ?>
+                    <?php foreach ($shown as $ev): ?>
                         <tr data-event="<?= e(json_encode($ev['json'], JSON_UNESCAPED_UNICODE)) ?>">
-                            <td data-label="Mã SK"><b class="ql-code">SK<?= str_pad((string)$ev['id'], 3, '0', STR_PAD_LEFT) ?></b></td>
+                            <td data-label="Mã SK"><b class="ql-code"><?= QlSukienView::code($ev['id']) ?></b></td>
                             <td data-label="Hình ảnh">
                                 <?php if ($ev['image_url']): ?>
                                     <img class="ql-thumb" src="<?= e($ev['image_url']) ?>" alt="" loading="lazy">
@@ -264,10 +275,10 @@ $requestStatusLabel = [
                             <td data-label="Địa điểm"><?= e($ev['location']) ?></td>
                             <td data-label="Đăng ký">
                                 <b><?= $ev['registered'] ?></b>/<?= $ev['capacity'] ?>
-                                <div class="ql-bar <?= $barClass ?>" title="<?= $ev['pct'] ?>%"><span style="width:<?= $ev['pct'] ?>%"></span></div>
+                                <div class="ql-bar <?= QlSukienView::barClass($ev['pct']) ?>" title="<?= $ev['pct'] ?>%"><span style="width:<?= $ev['pct'] ?>%"></span></div>
                             </td>
                             <td data-label="Trạng thái">
-                                <span class="ql-badge ql-badge--<?= $ev['status'] ?>"><?= $statusLabel[$ev['status']] ?></span>
+                                <span class="ql-badge ql-badge--<?= $ev['status'] ?>"><?= QlSukienView::STATUS_LABELS[$ev['status']] ?></span>
                                 <?php if ($ev['pending']): ?>
                                     <span class="ql-badge ql-badge--pending">Chờ duyệt <?= $ev['pending'] === 'xoa' ? 'xóa' : 'sửa' ?></span>
                                 <?php endif; ?>
@@ -296,13 +307,12 @@ $requestStatusLabel = [
             <?php if ($pages > 1): ?>
             <nav class="ql-pager" aria-label="Phân trang">
                 <?php for ($i = 1; $i <= $pages; $i++): ?>
-                    <a href="<?= ql_url(['trang' => $i]) ?>" class="<?= $i === $page ? 'is-active' : '' ?>" <?= $i === $page ? 'aria-current="page"' : '' ?>><?= $i ?></a>
+                    <a href="<?= QlUrl::query(['trang' => $i]) ?>" class="<?= $i === $page ? 'is-active' : '' ?>" <?= $i === $page ? 'aria-current="page"' : '' ?>><?= $i ?></a>
                 <?php endfor; ?>
             </nav>
             <?php endif; ?>
         </section>
 
-        <!-- Thông báo nhanh -->
         <div class="ql-toasts" id="qlToasts" aria-live="polite"></div>
 
     <?php endif; ?>
@@ -312,30 +322,7 @@ $requestStatusLabel = [
     <?php include ROOT_PATH . '/components/footer.php'; ?>
     <script src="../../assets/js/components.js"></script>
     <?php if (!$forbidden): ?>
-    <script src="Qlsukien.js?v=5"></script>
-    <script>
-    // Rút lại yêu cầu đang chờ duyệt (token lấy từ csrfField() trong form, đúng tên field của auth.php)
-    document.querySelectorAll('.js-cancel').forEach(function (btn) {
-        btn.addEventListener('click', async function () {
-            if (!confirm('Rút lại yêu cầu "' + btn.dataset.title + '"?')) return;
-            const tk = document.querySelector('#qlForm input[type="hidden"][name*="csrf"]');
-            const fd = new FormData();
-            fd.append(tk.name, tk.value);
-            fd.append('action', 'cancel_request');
-            fd.append('request_id', btn.dataset.id);
-            btn.disabled = true;
-            try {
-                const res  = await fetch(location.href, { method: 'POST', body: fd });
-                const json = await res.json();
-                alert(json.message);
-                if (json.ok) location.reload(); else btn.disabled = false;
-            } catch (err) {
-                alert('Không kết nối được máy chủ.');
-                btn.disabled = false;
-            }
-        });
-    });
-    </script>
+        <script src="Qlsukien.js?v=5"></script>
     <?php endif; ?>
 
 </body>

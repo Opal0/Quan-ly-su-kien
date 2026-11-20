@@ -1,273 +1,878 @@
-/* =====================================================
-   Qlsukien.css - trang quản lý sự kiện (tiền tố ql-)
-   Tông xanh biển cùng bảng màu với website (top bar, nút, trang sự kiện).
-   Đổi màu ở khối biến bên dưới.
-   ===================================================== */
 .ql {
-  --ql-primary: #3a7ca5;
-  --ql-primary-dark: #2c6486;
-  --ql-accent: #5aa0c8;
-  --ql-danger: #d6455d;
-  --ql-success: #2f9e6b;
-  --ql-warning: #e0922f;
-  --ql-page: linear-gradient(180deg, #eaf3fa 0%, #dbeaf5 100%);
-  --ql-card: #f8fbfe;
-  --ql-text: #1f3446;
-  --ql-muted: #5d7183;
-  --ql-border: #d3e2ee;
-  --ql-soft: #e3eff7;
-  --ql-radius: 16px;
-  --ql-shadow: 0 1px 2px rgba(31, 70, 110, .07), 0 8px 22px rgba(31, 70, 110, .10);
-
-  max-width: 1200px;
-  margin: 24px auto 56px;
-  padding: 18px;
-  border-radius: 24px;
-  box-shadow: 0 20px 50px -20px rgba(0, 0, 0, .55);   /* nổi lên khỏi nền xanh đậm của website */
-  background: var(--ql-page);
-  color: var(--ql-text);
-  font-family: "Times New Roman", Times, serif;
+    --ql-primary: #3a7ca5;
+    --ql-primary-dark: #2c6486;
+    --ql-accent: #5aa0c8;
+    --ql-danger: #d6455d;
+    --ql-success: #2f9e6b;
+    --ql-warning: #e0922f;
+    --ql-page: linear-gradient(180deg, #eaf3fa 0%, #dbeaf5 100%);
+    --ql-card: #f8fbfe;
+    --ql-text: #1f3446;
+    --ql-muted: #5d7183;
+    --ql-border: #d3e2ee;
+    --ql-soft: #e3eff7;
+    --ql-radius: 16px;
+    --ql-shadow: 0 1px 2px rgba(31, 70, 110, .07), 0 8px 22px rgba(31, 70, 110, .10);
+    max-width: 1200px;
+    margin: 24px auto 56px;
+    padding: 18px;
+    border-radius: 24px;
+    box-shadow: 0 20px 50px -20px rgba(0, 0, 0, .55);
+    background: var(--ql-page);
+    color: var(--ql-text);
+    font-family: "Times New Roman", Times, serif;
 }
 
-/* Đổi toàn bộ chữ trong trang sang Times New Roman */
 .ql *:not(i):not(svg) {
-  font-family: "Times New Roman", Times, serif !important;
+    font-family: "Times New Roman", Times, serif !important;
 }
 
-/* Giữ font của icon Font Awesome */
 .ql i {
-  font-family: "Font Awesome 6 Free" !important;
+    font-family: "Font Awesome 6 Free" !important;
 }
 
-.ql *, .ql *::before, .ql *::after { box-sizing: border-box; }
-.ql h1, .ql h2, .ql p { margin: 0; }
+.ql *,
+.ql *::before,
+.ql *::after {
+    box-sizing: border-box;
+}
 
-.ql-sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+.ql h1,
+.ql h2,
+.ql p {
+    margin: 0;
+}
 
-/* ===== Nút ===== */
+.ql-sr {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+}
+
 .ql-btn {
-  display: inline-flex; align-items: center; justify-content: center; gap: 8px;
-  padding: 10px 20px; border: 1px solid transparent; border-radius: 12px;
-  background: var(--ql-primary); color: #fff; font: inherit; font-weight: 600; font-size: .9rem;
-  text-decoration: none; cursor: pointer; transition: background .15s, transform .1s;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 10px 20px;
+    border: 1px solid transparent;
+    border-radius: 12px;
+    background: var(--ql-primary);
+    color: #fff;
+    font: inherit;
+    font-weight: 600;
+    font-size: .9rem;
+    text-decoration: none;
+    cursor: pointer;
+    transition: background .15s, transform .1s;
 }
-.ql-btn:hover { background: var(--ql-primary-dark); }
-.ql-btn:active { transform: translateY(1px); }
-.ql-btn:disabled { opacity: .6; cursor: not-allowed; }
-.ql-btn--ghost { background: rgba(255, 255, 255, .7); color: var(--ql-primary); border-color: var(--ql-border); }
-.ql-btn--ghost:hover { background: #fff; }
-.ql-btn--soft { background: var(--ql-soft); color: var(--ql-primary); border-color: var(--ql-border); }
-.ql-btn--soft:hover { background: #d3e6f3; }
-.ql-btn--sm { padding: 8px 14px; font-size: .82rem; }
 
-/* ===== Banner ===== */
+.ql-btn:hover {
+    background: var(--ql-primary-dark);
+}
+
+.ql-btn:active {
+    transform: translateY(1px);
+}
+
+.ql-btn:disabled {
+    opacity: .6;
+    cursor: not-allowed;
+}
+
+.ql-btn--ghost {
+    background: rgba(255, 255, 255, .7);
+    color: var(--ql-primary);
+    border-color: var(--ql-border);
+}
+
+.ql-btn--ghost:hover {
+    background: #fff;
+}
+
+.ql-btn--soft {
+    background: var(--ql-soft);
+    color: var(--ql-primary);
+    border-color: var(--ql-border);
+}
+
+.ql-btn--soft:hover {
+    background: #d3e6f3;
+}
+
+.ql-btn--sm {
+    padding: 8px 14px;
+    font-size: .82rem;
+}
+
 .ql-banner {
-  display: flex; align-items: center; gap: 18px; flex-wrap: wrap;
-  padding: 18px 22px; margin-bottom: 16px;
-  border: 1px solid var(--ql-border); border-radius: 20px;
-  background: linear-gradient(110deg, #d9eaf6 0%, #f1f8fd 55%, #e0eef8 100%);
-  box-shadow: var(--ql-shadow);
+    display: flex;
+    align-items: center;
+    gap: 18px;
+    flex-wrap: wrap;
+    padding: 18px 22px;
+    margin-bottom: 16px;
+    border: 1px solid var(--ql-border);
+    border-radius: 20px;
+    background: linear-gradient(110deg, #d9eaf6 0%, #f1f8fd 55%, #e0eef8 100%);
+    box-shadow: var(--ql-shadow);
 }
-.ql-banner__art { position: relative; width: 84px; height: 72px; flex: none; }
+
+.ql-banner__art {
+    position: relative;
+    width: 84px;
+    height: 72px;
+    flex: none;
+}
+
 .ql-vinyl {
-  position: absolute; left: 4px; top: 6px; width: 62px; height: 62px; border-radius: 50%;
-  background:
-    radial-gradient(circle, #e3f1fb 0 9%, #5aa0c8 10% 22%, transparent 23%),
-    repeating-radial-gradient(circle, #12304a 0 2px, #1c4566 3px 4px);
-  box-shadow: 0 6px 14px rgba(18, 48, 74, .40);
+    position: absolute;
+    left: 4px;
+    top: 6px;
+    width: 62px;
+    height: 62px;
+    border-radius: 50%;
+    background:
+        radial-gradient(circle, #e3f1fb 0 9%, #5aa0c8 10% 22%, transparent 23%),
+        repeating-radial-gradient(circle, #12304a 0 2px, #1c4566 3px 4px);
+    box-shadow: 0 6px 14px rgba(18, 48, 74, .40);
 }
-.ql-note { position: absolute; color: var(--ql-accent); }
-.ql-note--1 { right: 2px; top: 0; font-size: 1.05rem; }
-.ql-note--2 { right: 12px; bottom: 2px; font-size: .8rem; opacity: .7; }
-.ql-banner__text { flex: 1 1 260px; min-width: 0; }
-.ql-banner__text h1 { font-size: 1.55rem; font-weight: 800; line-height: 1.2; }
-.ql-banner__text p { margin-top: 4px; color: var(--ql-muted); font-size: .92rem; }
-.ql-banner__actions { display: flex; flex-wrap: wrap; gap: 10px; }
 
-/* ===== Thẻ ===== */
+.ql-note {
+    position: absolute;
+    color: var(--ql-accent);
+}
+
+.ql-note--1 {
+    right: 2px;
+    top: 0;
+    font-size: 1.05rem;
+}
+
+.ql-note--2 {
+    right: 12px;
+    bottom: 2px;
+    font-size: .8rem;
+    opacity: .7;
+}
+
+.ql-banner__text {
+    flex: 1 1 260px;
+    min-width: 0;
+}
+
+.ql-banner__text h1 {
+    font-size: 1.55rem;
+    font-weight: 800;
+    line-height: 1.2;
+}
+
+.ql-banner__text p {
+    margin-top: 4px;
+    color: var(--ql-muted);
+    font-size: .92rem;
+}
+
+.ql-banner__actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
 .ql-card {
-  margin-bottom: 16px; padding: 18px 20px;
-  border: 1px solid var(--ql-border); border-radius: 20px;
-  background: var(--ql-card); box-shadow: var(--ql-shadow);
+    margin-bottom: 16px;
+    padding: 18px 20px;
+    border: 1px solid var(--ql-border);
+    border-radius: 20px;
+    background: var(--ql-card);
+    box-shadow: var(--ql-shadow);
 }
-.ql-card__title { display: flex; align-items: center; gap: 8px; margin-bottom: 14px; font-size: 1rem; font-weight: 700; color: var(--ql-primary); }
 
-/* ===== Form ===== */
+.ql-card__title {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 14px;
+    font-size: 1rem;
+    font-weight: 700;
+    color: var(--ql-primary);
+}
+
 .ql-grid {
-  display: grid; gap: 14px 18px;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+    display: grid;
+    gap: 14px 18px;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
 }
-.ql-field { display: flex; flex-direction: column; gap: 5px; min-width: 0; }
-.ql-field--loc  { grid-column: 1 / 3; }
-.ql-field--img  { grid-column: 4; grid-row: 2 / span 2; }
-.ql-field--desc { grid-column: 1 / 4; }
 
-.ql-field label, .ql-label { font-size: .8rem; font-weight: 700; }
-.ql-field label b { color: var(--ql-danger); }
-.ql-field input:not([type="checkbox"]), .ql-field select, .ql-field textarea {
-  width: 100%; padding: 10px 12px; border: 1px solid var(--ql-border); border-radius: 10px;
-  background: #fff; color: var(--ql-text); font: inherit; font-size: .88rem;
+.ql-field {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    min-width: 0;
 }
-.ql-field ::placeholder { color: #8fa3b5; }
-.ql-field textarea { resize: vertical; min-height: 84px; }
-.ql-field input:focus, .ql-field select:focus, .ql-field textarea:focus {
-  outline: 2px solid var(--ql-accent); outline-offset: 1px; border-color: transparent;
-}
-.ql-field.has-error input, .ql-field.has-error select, .ql-field.has-error textarea { border-color: var(--ql-danger); }
-.ql-hint { color: var(--ql-muted); font-size: .76rem; }
-.ql-err { color: var(--ql-danger); font-size: .78rem; min-height: 0; }
 
-/* Vùng kéo thả ảnh */
+.ql-field--loc {
+    grid-column: 1 / 3;
+}
+
+.ql-field--img {
+    grid-column: 4;
+    grid-row: 2 / span 2;
+}
+
+.ql-field--desc {
+    grid-column: 1 / 4;
+}
+
+.ql-field label,
+.ql-label {
+    font-size: .8rem;
+    font-weight: 700;
+}
+
+.ql-field label b {
+    color: var(--ql-danger);
+}
+
+.ql-field input:not([type="checkbox"]),
+.ql-field select,
+.ql-field textarea {
+    width: 100%;
+    padding: 10px 12px;
+    border: 1px solid var(--ql-border);
+    border-radius: 10px;
+    background: #fff;
+    color: var(--ql-text);
+    font: inherit;
+    font-size: .88rem;
+}
+
+.ql-field ::placeholder {
+    color: #8fa3b5;
+}
+
+.ql-field textarea {
+    resize: vertical;
+    min-height: 84px;
+}
+
+.ql-field input:focus,
+.ql-field select:focus,
+.ql-field textarea:focus {
+    outline: 2px solid var(--ql-accent);
+    outline-offset: 1px;
+    border-color: transparent;
+}
+
+.ql-field.has-error input,
+.ql-field.has-error select,
+.ql-field.has-error textarea {
+    border-color: var(--ql-danger);
+}
+
+.ql-hint {
+    color: var(--ql-muted);
+    font-size: .76rem;
+}
+
+.ql-err {
+    color: var(--ql-danger);
+    font-size: .78rem;
+    min-height: 0;
+}
+
 .ql-drop {
-  position: relative; flex: 1; min-height: 130px; overflow: hidden;
-  display: flex; align-items: center; justify-content: center; text-align: center;
-  border: 1.5px dashed #a9c8de; border-radius: 12px; background: #f5fafe;
-  color: var(--ql-muted); font-size: .8rem; font-weight: 500; cursor: pointer;
-  transition: background .15s, border-color .15s;
+    position: relative;
+    flex: 1;
+    min-height: 130px;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    border: 1.5px dashed #a9c8de;
+    border-radius: 12px;
+    background: #f5fafe;
+    color: var(--ql-muted);
+    font-size: .8rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background .15s, border-color .15s;
 }
-.ql-drop:hover, .ql-drop.is-over { background: #e8f3fa; border-color: var(--ql-accent); }
-.ql-field--img:focus-within .ql-drop { outline: 2px solid var(--ql-accent); outline-offset: 1px; }
-.ql-drop__hint { display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 10px; }
-.ql-drop__hint i { font-size: 1.5rem; color: var(--ql-accent); }
-.ql-drop__hint small { font-size: .7rem; opacity: .8; }
-.ql-drop img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
-.ql-drop.has-img .ql-drop__hint { display: none; }
-.ql-check { display: flex !important; align-items: center; gap: 8px; font-weight: 500 !important; font-size: .8rem !important; }
-.ql-check input { width: auto; }
 
-.ql-form__foot { display: flex; align-items: center; justify-content: flex-end; gap: 10px; margin-top: 14px; }
-.ql-err--form { margin-right: auto; }
+.ql-drop:hover,
+.ql-drop.is-over {
+    background: #e8f3fa;
+    border-color: var(--ql-accent);
+}
 
-/* ===== Bộ lọc ===== */
-.ql-filter { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin-bottom: 14px; }
-.ql-search { position: relative; flex: 1 1 280px; }
-.ql-search i { position: absolute; left: 13px; top: 50%; transform: translateY(-50%); color: var(--ql-muted); font-size: .85rem; }
+.ql-field--img:focus-within .ql-drop {
+    outline: 2px solid var(--ql-accent);
+    outline-offset: 1px;
+}
+
+.ql-drop__hint {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    padding: 10px;
+}
+
+.ql-drop__hint i {
+    font-size: 1.5rem;
+    color: var(--ql-accent);
+}
+
+.ql-drop__hint small {
+    font-size: .7rem;
+    opacity: .8;
+}
+
+.ql-drop img {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.ql-drop.has-img .ql-drop__hint {
+    display: none;
+}
+
+.ql-check {
+    display: flex !important;
+    align-items: center;
+    gap: 8px;
+    font-weight: 500 !important;
+    font-size: .8rem !important;
+}
+
+.ql-check input {
+    width: auto;
+}
+
+.ql-form__foot {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 10px;
+    margin-top: 14px;
+}
+
+.ql-err--form {
+    margin-right: auto;
+}
+
+.ql-filter {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    align-items: center;
+    margin-bottom: 14px;
+}
+
+.ql-search {
+    position: relative;
+    flex: 1 1 280px;
+}
+
+.ql-search i {
+    position: absolute;
+    left: 13px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--ql-muted);
+    font-size: .85rem;
+}
+
 .ql-search input {
-  width: 100%; padding: 10px 12px 10px 36px; border: 1px solid var(--ql-border); border-radius: 10px;
-  background: #fff; color: var(--ql-text); font: inherit; font-size: .88rem;
+    width: 100%;
+    padding: 10px 12px 10px 36px;
+    border: 1px solid var(--ql-border);
+    border-radius: 10px;
+    background: #fff;
+    color: var(--ql-text);
+    font: inherit;
+    font-size: .88rem;
 }
-.ql-select { position: relative; }
-.ql-select i { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: var(--ql-primary); font-size: .8rem; pointer-events: none; }
+
+.ql-select {
+    position: relative;
+}
+
+.ql-select i {
+    position: absolute;
+    left: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--ql-primary);
+    font-size: .8rem;
+    pointer-events: none;
+}
+
 .ql-select select {
-  padding: 10px 12px 10px 32px; border: 1px solid var(--ql-border); border-radius: 10px;
-  background: #fff; color: var(--ql-text); font: inherit; font-size: .86rem; cursor: pointer;
+    padding: 10px 12px 10px 32px;
+    border: 1px solid var(--ql-border);
+    border-radius: 10px;
+    background: #fff;
+    color: var(--ql-text);
+    font: inherit;
+    font-size: .86rem;
+    cursor: pointer;
 }
-.ql-search input:focus, .ql-select select:focus { outline: 2px solid var(--ql-accent); outline-offset: 1px; border-color: transparent; }
 
-/* ===== Bảng ===== */
-.ql-tablewrap { overflow-x: auto; border: 1px solid var(--ql-border); border-radius: 14px; background: #fff; }
-.ql-table { width: 100%; border-collapse: collapse; min-width: 980px; }
+.ql-search input:focus,
+.ql-select select:focus {
+    outline: 2px solid var(--ql-accent);
+    outline-offset: 1px;
+    border-color: transparent;
+}
+
+.ql-tablewrap {
+    overflow-x: auto;
+    border: 1px solid var(--ql-border);
+    border-radius: 14px;
+    background: #fff;
+}
+
+.ql-table {
+    width: 100%;
+    border-collapse: collapse;
+    min-width: 980px;
+}
+
 .ql-table th {
-  padding: 11px 12px; text-align: left; background: #dcebf6;
-  font-size: .76rem; font-weight: 700; color: var(--ql-primary); white-space: nowrap;
+    padding: 11px 12px;
+    text-align: left;
+    background: #dcebf6;
+    font-size: .76rem;
+    font-weight: 700;
+    color: var(--ql-primary);
+    white-space: nowrap;
 }
-.ql-table td { padding: 10px 12px; border-top: 1px solid #e6eff6; vertical-align: middle; font-size: .86rem; }
-.ql-table tbody tr:hover { background: #f3f9fd; }
-.ql-table small { display: block; color: var(--ql-muted); font-size: .76rem; }
-.ql-center { text-align: center !important; }
-.ql-code { font-weight: 700; color: var(--ql-primary); white-space: nowrap; }
-.ql-empty { text-align: center; padding: 40px 14px !important; color: var(--ql-muted); }
-.ql-empty i { font-size: 1.8rem; margin-bottom: 8px; }
 
-.ql-thumb { display: block; width: 76px; height: 44px; border-radius: 8px; object-fit: cover; background: var(--ql-soft); }
-.ql-thumb--empty { display: flex; align-items: center; justify-content: center; color: var(--ql-muted); border: 1px dashed var(--ql-border); }
-.ql-tag { display: inline-block; padding: 2px 9px; border-radius: 999px; background: var(--ql-soft); color: var(--ql-primary); font-size: .74rem; font-weight: 600; white-space: nowrap; }
+.ql-table td {
+    padding: 10px 12px;
+    border-top: 1px solid #e6eff6;
+    vertical-align: middle;
+    font-size: .86rem;
+}
 
-/* Thanh tiến độ */
-.ql-bar { height: 6px; min-width: 80px; margin-top: 5px; border-radius: 999px; background: #dbe8f2; overflow: hidden; }
-.ql-bar span { display: block; height: 100%; background: var(--ql-success); border-radius: 999px; transition: width .3s; }
-.ql-bar.is-warn span { background: var(--ql-warning); }
-.ql-bar.is-full span { background: var(--ql-danger); }
+.ql-table tbody tr:hover {
+    background: #f3f9fd;
+}
 
-/* Nhãn trạng thái */
-.ql-badge { display: inline-block; padding: 4px 12px; border-radius: 999px; font-size: .74rem; font-weight: 700; white-space: nowrap; }
-.ql-badge--upcoming  { background: #fde8c8; color: #9a5b0c; }
-.ql-badge--today     { background: #d8f3e5; color: #1f7a50; }
-.ql-badge--past      { background: #e8e5ee; color: #5b556a; }
-.ql-badge--cancelled { background: #fddde2; color: #b3263d; }
+.ql-table small {
+    display: block;
+    color: var(--ql-muted);
+    font-size: .76rem;
+}
 
-/* Nút thao tác */
-.ql-actions { white-space: nowrap; }
-.ql-actions > * + * { margin-left: 6px; }
+.ql-center {
+    text-align: center !important;
+}
+
+.ql-code {
+    font-weight: 700;
+    color: var(--ql-primary);
+    white-space: nowrap;
+}
+
+.ql-empty {
+    text-align: center;
+    padding: 40px 14px !important;
+    color: var(--ql-muted);
+}
+
+.ql-empty i {
+    font-size: 1.8rem;
+    margin-bottom: 8px;
+}
+
+.ql-thumb {
+    display: block;
+    width: 76px;
+    height: 44px;
+    border-radius: 8px;
+    object-fit: cover;
+    background: var(--ql-soft);
+}
+
+.ql-thumb--empty {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--ql-muted);
+    border: 1px dashed var(--ql-border);
+}
+
+.ql-tag {
+    display: inline-block;
+    padding: 2px 9px;
+    border-radius: 999px;
+    background: var(--ql-soft);
+    color: var(--ql-primary);
+    font-size: .74rem;
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+.ql-bar {
+    height: 6px;
+    min-width: 80px;
+    margin-top: 5px;
+    border-radius: 999px;
+    background: #dbe8f2;
+    overflow: hidden;
+}
+
+.ql-bar span {
+    display: block;
+    height: 100%;
+    background: var(--ql-success);
+    border-radius: 999px;
+    transition: width .3s;
+}
+
+.ql-bar.is-warn span {
+    background: var(--ql-warning);
+}
+
+.ql-bar.is-full span {
+    background: var(--ql-danger);
+}
+
+.ql-badge {
+    display: inline-block;
+    padding: 4px 12px;
+    border-radius: 999px;
+    font-size: .74rem;
+    font-weight: 700;
+    white-space: nowrap;
+}
+
+.ql-badge--upcoming {
+    background: #fde8c8;
+    color: #9a5b0c;
+}
+
+.ql-badge--today {
+    background: #d8f3e5;
+    color: #1f7a50;
+}
+
+.ql-badge--past {
+    background: #e8e5ee;
+    color: #5b556a;
+}
+
+.ql-badge--cancelled {
+    background: #fddde2;
+    color: #b3263d;
+}
+
+.ql-actions {
+    white-space: nowrap;
+}
+
+.ql-actions > * + * {
+    margin-left: 6px;
+}
+
 .ql-act {
-  display: inline-flex; align-items: center; justify-content: center; gap: 6px;
-  padding: 6px 12px; border: 0; border-radius: 8px; font: inherit; font-size: .78rem; font-weight: 600;
-  text-decoration: none; cursor: pointer; transition: filter .15s;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding: 6px 12px;
+    border: 0;
+    border-radius: 8px;
+    font: inherit;
+    font-size: .78rem;
+    font-weight: 600;
+    text-decoration: none;
+    cursor: pointer;
+    transition: filter .15s;
 }
-.ql-act:hover { filter: brightness(.94); }
-.ql-act:disabled { opacity: .5; cursor: not-allowed; }
-.ql-act--edit  { background: #dcebf6; color: var(--ql-primary); }
-.ql-act--users { background: #dcebf6; color: var(--ql-primary); padding: 6px 10px; }
-.ql-act--del   { background: #fddde2; color: #c43048; }
 
-.ql-count { margin: 12px 2px 0; font-size: .82rem; color: var(--ql-muted); }
+.ql-act:hover {
+    filter: brightness(.94);
+}
 
-/* ===== Phân trang ===== */
-.ql-pager { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 14px; }
+.ql-act:disabled {
+    opacity: .5;
+    cursor: not-allowed;
+}
+
+.ql-act--edit {
+    background: #dcebf6;
+    color: var(--ql-primary);
+}
+
+.ql-act--users {
+    background: #dcebf6;
+    color: var(--ql-primary);
+    padding: 6px 10px;
+}
+
+.ql-act--del {
+    background: #fddde2;
+    color: #c43048;
+}
+
+.ql-count {
+    margin: 12px 2px 0;
+    font-size: .82rem;
+    color: var(--ql-muted);
+}
+
+.ql-pager {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: 14px;
+}
+
 .ql-pager a {
-  min-width: 36px; padding: 7px 10px; text-align: center; border-radius: 8px; text-decoration: none;
-  border: 1px solid var(--ql-border); background: #fff; color: var(--ql-text); font-size: .85rem;
+    min-width: 36px;
+    padding: 7px 10px;
+    text-align: center;
+    border-radius: 8px;
+    text-decoration: none;
+    border: 1px solid var(--ql-border);
+    background: #fff;
+    color: var(--ql-text);
+    font-size: .85rem;
 }
-.ql-pager a.is-active { background: var(--ql-primary); border-color: var(--ql-primary); color: #fff; }
 
-/* ===== Thông báo ===== */
-.ql-alert { margin-bottom: 16px; padding: 12px 16px; border-radius: 12px; background: #fddde2; color: #8f1d31; }
-.ql-denied { text-align: center; padding: 72px 16px; }
-.ql-denied i { font-size: 2.4rem; opacity: .6; }
-.ql-denied h1 { margin: 14px 0 6px; font-size: 1.4rem; }
-.ql-denied p { margin: 0 0 18px; opacity: .75; }
+.ql-pager a.is-active {
+    background: var(--ql-primary);
+    border-color: var(--ql-primary);
+    color: #fff;
+}
 
-.ql-toasts { position: fixed; right: 16px; bottom: 16px; z-index: 1000; display: flex; flex-direction: column; gap: 10px; }
+.ql-alert {
+    margin-bottom: 16px;
+    padding: 12px 16px;
+    border-radius: 12px;
+    background: #fddde2;
+    color: #8f1d31;
+}
+
+.ql-denied {
+    text-align: center;
+    padding: 72px 16px;
+}
+
+.ql-denied i {
+    font-size: 2.4rem;
+    opacity: .6;
+}
+
+.ql-denied h1 {
+    margin: 14px 0 6px;
+    font-size: 1.4rem;
+}
+
+.ql-denied p {
+    margin: 0 0 18px;
+    opacity: .75;
+}
+
+.ql-toasts {
+    position: fixed;
+    right: 16px;
+    bottom: 16px;
+    z-index: 1000;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
 .ql-toast {
-  max-width: 360px; padding: 12px 16px; border-radius: 12px; color: #fff; background: #12304a;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, .2); animation: ql-in .2s ease-out;
+    max-width: 360px;
+    padding: 12px 16px;
+    border-radius: 12px;
+    color: #fff;
+    background: #12304a;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, .2);
+    animation: ql-in .2s ease-out;
 }
-.ql-toast--ok { background: var(--ql-success); }
-.ql-toast--error { background: var(--ql-danger); }
-@keyframes ql-in { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
 
-/* ===== Máy tính bảng ===== */
+.ql-toast--ok {
+    background: var(--ql-success);
+}
+
+.ql-toast--error {
+    background: var(--ql-danger);
+}
+
+@keyframes ql-in {
+    from {
+        opacity: 0;
+        transform: translateY(8px);
+    }
+
+    to {
+        opacity: 1;
+        transform: none;
+    }
+}
+
 @media (max-width: 980px) {
-  .ql-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .ql-field--loc  { grid-column: 1 / -1; }
-  .ql-field--img  { grid-column: 1 / -1; grid-row: auto; }
-  .ql-field--desc { grid-column: 1 / -1; }
-  .ql-drop { min-height: 150px; }
+    .ql-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .ql-field--loc {
+        grid-column: 1 / -1;
+    }
+
+    .ql-field--img {
+        grid-column: 1 / -1;
+        grid-row: auto;
+    }
+
+    .ql-field--desc {
+        grid-column: 1 / -1;
+    }
+
+    .ql-drop {
+        min-height: 150px;
+    }
 }
 
-/* ===== Điện thoại: mỗi dòng của bảng thành một thẻ ===== */
 @media (max-width: 760px) {
-  .ql { padding: 12px; border-radius: 18px; }
-  .ql-grid { grid-template-columns: 1fr; }
-  .ql-banner__actions { width: 100%; }
-  .ql-table { min-width: 0; }
-  .ql-table thead { display: none; }
-  .ql-table, .ql-table tbody, .ql-table tr, .ql-table td { display: block; width: 100%; }
-  .ql-table tr { padding: 10px 6px; border-top: 1px solid #e6eff6; }
-  .ql-table tbody tr:first-child { border-top: 0; }
-  .ql-table td { border: 0; padding: 5px 12px; }
-  .ql-table td[data-label]::before { content: attr(data-label); display: block; font-size: .7rem; text-transform: uppercase; color: var(--ql-muted); }
-  .ql-center { text-align: left !important; }
-  .ql-toasts { left: 16px; right: 16px; }
-  .ql-toast { max-width: none; }
+    .ql {
+        padding: 12px;
+        border-radius: 18px;
+    }
+
+    .ql-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .ql-banner__actions {
+        width: 100%;
+    }
+
+    .ql-table {
+        min-width: 0;
+    }
+
+    .ql-table thead {
+        display: none;
+    }
+
+    .ql-table,
+    .ql-table tbody,
+    .ql-table tr,
+    .ql-table td {
+        display: block;
+        width: 100%;
+    }
+
+    .ql-table tr {
+        padding: 10px 6px;
+        border-top: 1px solid #e6eff6;
+    }
+
+    .ql-table tbody tr:first-child {
+        border-top: 0;
+    }
+
+    .ql-table td {
+        border: 0;
+        padding: 5px 12px;
+    }
+
+    .ql-table td[data-label]::before {
+        content: attr(data-label);
+        display: block;
+        font-size: .7rem;
+        text-transform: uppercase;
+        color: var(--ql-muted);
+    }
+
+    .ql-center {
+        text-align: left !important;
+    }
+
+    .ql-toasts {
+        left: 16px;
+        right: 16px;
+    }
+
+    .ql-toast {
+        max-width: none;
+    }
 }
 
-/* ===== Ô chọn ngày giờ: dd/mm/yyyy + giờ 00-23 + phút 00-59 ===== */
-.ql-dt { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 6px; }
-.ql-dt__datebox { position: relative; flex: 1 1 100%; min-width: 0; }
-.ql-field .ql-dt input.ql-dt__date { padding-right: 34px; }
+.ql-dt {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px 6px;
+}
+
+.ql-dt__datebox {
+    position: relative;
+    flex: 1 1 100%;
+    min-width: 0;
+}
+
+.ql-field .ql-dt input.ql-dt__date {
+    padding-right: 34px;
+}
+
 .ql-dt__cal {
-  position: absolute; right: 4px; top: 50%; transform: translateY(-50%);
-  width: 28px; height: 28px; border: 0; border-radius: 8px; background: transparent;
-  color: var(--ql-primary); cursor: pointer;
+    position: absolute;
+    right: 4px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 28px;
+    height: 28px;
+    border: 0;
+    border-radius: 8px;
+    background: transparent;
+    color: var(--ql-primary);
+    cursor: pointer;
 }
-.ql-dt__cal:hover { background: var(--ql-soft); }
-.ql-field .ql-dt input.ql-dt__native {
-  position: absolute; left: 0; bottom: 0; width: 100%; height: 0; padding: 0; border: 0;
-  opacity: 0; pointer-events: none;
-}
-.ql-field .ql-dt select { width: auto; flex: 1 1 0; min-width: 0; padding: 10px 8px; cursor: pointer; }
-.ql-dt__sep { font-weight: 700; color: var(--ql-muted); }
 
-/* Ô "Xóa ảnh hiện tại" phải ẩn khi chưa có ảnh (thuộc tính hidden bị .ql-check ghi đè) */
-.ql-check[hidden] { display: none !important; }
+.ql-dt__cal:hover {
+    background: var(--ql-soft);
+}
+
+.ql-field .ql-dt input.ql-dt__native {
+    position: absolute;
+    left: 0;
+    bottom: 0;
+    width: 100%;
+    height: 0;
+    padding: 0;
+    border: 0;
+    opacity: 0;
+    pointer-events: none;
+}
+
+.ql-field .ql-dt select {
+    width: auto;
+    flex: 1 1 0;
+    min-width: 0;
+    padding: 10px 8px;
+    cursor: pointer;
+}
+
+.ql-dt__sep {
+    font-weight: 700;
+    color: var(--ql-muted);
+}
+
+.ql-check[hidden] {
+    display: none !important;
+}

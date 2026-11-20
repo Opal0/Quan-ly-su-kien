@@ -1,14 +1,16 @@
-document.addEventListener("DOMContentLoaded", function () {
+class RowHover {
+    constructor(selector) {
+        this.rows = document.querySelectorAll(selector);
+        this.bind();
+    }
 
-    // Hiệu ứng khi rê chuột vào các dòng trong bảng
-    const rows = document.querySelectorAll("tbody tr");
-
-    rows.forEach(function (row) {
-
-        row.addEventListener("mouseenter", function () {
-            row.style.transition = "0.2s";
+    bind() {
+        this.rows.forEach((row) => {
+            row.addEventListener('mouseenter', () => {
+                row.style.transition = '0.2s';
+            });
         });
+    }
+}
 
-    });
-
-});
+document.addEventListener('DOMContentLoaded', () => new RowHover('tbody tr'));

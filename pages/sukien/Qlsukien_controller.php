@@ -1,894 +1,718 @@
 <?php
-/**
- * Xử lý dữ liệu cho trang quản lý sự kiện của ORGANIZER (qlsukien.php).
- * Thêm / sửa / xóa KHÔNG áp dụng ngay: chỉ tạo yêu cầu trong bảng yeucau_sukien,
- * admin duyệt ở pages/admin/duyetsukien.php thì bảng sukien mới thay đổi.
- *
- * - GET : nạp danh sách sự kiện của tôi, thống kê, lọc, phân trang, các yêu cầu của tôi
- * - POST: save / delete / cancel_request (AJAX, trả về JSON)
- * Được nạp từ qlsukien.php (sau session_start và tạo CSRF token).
- */
 require_once __DIR__ . '/../../includes/auth.php';
-require_once ROOT_PATH . '/config/database.php';   // cung cấp getDB()
+require_once ROOT_PATH . '/config/database.php';
 
-/* ---------- Cấu hình: chỉnh cho khớp CSDL của nhóm ---------- */
-const QL_STATUS_OPEN      = 'sap_dien_ra';
-const QL_STATUS_CANCELLED = 'da_huy';
-const QL_MAX_IMAGE        = 2 * 1024 * 1024; // 2MB
-const QL_PER_PAGE         = 8;
-const QL_UPLOAD_SUBDIR    = 'assets/uploads/sukien/';
-
-/* ---------- Hàm hỗ trợ ---------- */
-function ql_url(array $over = []): string {
-    $q = array_merge($_GET, $over);
-    $q = array_filter($q, fn($v) => $v !== '' && $v !== null);
-    return '?' . http_build_query($q);
-}
-
-function ql_base(): string { return defined('BASE_URL') ? rtrim(BASE_URL, '/') : '../..'; }
-
-// Kiểm tra quyền admin
-function ql_is_admin(): bool {
-    if (!isAdmin()) return false;
-
-    try {
-        $st = getDB()->prepare('SELECT VaiTro, TrangThai FROM nguoidung WHERE ID = ?');
-        $st->execute([$_SESSION['user_id']]);
-        $u = $st->fetch(PDO::FETCH_ASSOC);
-
-        if (!$u || $u['VaiTro'] !== 'admin' || $u['TrangThai'] !== 'hoat_dong') {
-            $_SESSION['user_role'] = $u['VaiTro'] ?? 'user';
-            return false;
-        }
-
-        return true;
-
-    } catch (Throwable $ex) {
-        error_log('ql_is_admin: ' . $ex->getMessage());
-        return false;
-    }
-}
-
-// Kiểm tra quyền organizer
-function ql_is_organizer(): bool {
-    if (!isLoggedIn()) return false;
-
-    try {
-        $st = getDB()->prepare('SELECT VaiTro, TrangThai FROM nguoidung WHERE ID = ?');
-        $st->execute([$_SESSION['user_id']]);
-        $u = $st->fetch(PDO::FETCH_ASSOC);
-
-        if (!$u || $u['VaiTro'] !== 'organizer' || $u['TrangThai'] !== 'hoat_dong') {
-            $_SESSION['user_role'] = $u['VaiTro'] ?? 'user';
-            return false;
-        }
-
-        return true;
-
-    } catch (Throwable $ex) {
-        error_log('ql_is_organizer: ' . $ex->getMessage());
-        return false;
-    }
-}
-
-function ql_json(int $code, array $payload): void {
-    http_response_code($code);
-    header('Content-Type: application/json; charset=utf-8');
-    echo json_encode($payload, JSON_UNESCAPED_UNICODE);
-    exit;
-}
-
-function ql_img_url(?string $img): string {
-    if (!$img) return '';
-    if (preg_match('#^(https?:)?//#', $img)) return $img;
-    return ql_base() . '/' . (strpos($img, '/') !== false ? ltrim($img, '/') : QL_UPLOAD_SUBDIR . $img);
-}
-
-function ql_parse_dt(string $s): ?string {
-    $s = trim(str_replace('T', ' ', $s));
-    if ($s === '') return null;
-
-    $ts = strtotime($s);
-
-    return $ts === false ? null : date('Y-m-d H:i:s', $ts);
-}
-
-// Lưu ảnh upload, trả về tên file mới
-function ql_save_image(string $field, array &$errors): ?string {
-    if (empty($_FILES[$field]) || $_FILES[$field]['error'] === UPLOAD_ERR_NO_FILE) {
-        return null;
+final class QlUrl
+{
+    public static function base(): string
+    {
+        return defined('BASE_URL') ? rtrim(BASE_URL, '/') : '../..';
     }
 
-    $f = $_FILES[$field];
-
-    if ($f['error'] !== UPLOAD_ERR_OK) {
-        $errors['image'] = 'Tải ảnh lên thất bại, hãy thử lại';
-        return null;
-    }
-
-    if ($f['size'] > QL_MAX_IMAGE) {
-        $errors['image'] = 'Ảnh tối đa 2MB';
-        return null;
-    }
-
-    // Kiểm tra loại file thật bằng nội dung
-    $mime = (new finfo(FILEINFO_MIME_TYPE))->file($f['tmp_name']);
-
-    $ext = [
-        'image/jpeg' => 'jpg',
-        'image/png'  => 'png',
-        'image/webp' => 'webp'
-    ][$mime] ?? null;
-
-    if (!$ext) {
-        $errors['image'] = 'Chỉ chấp nhận ảnh JPG, PNG hoặc WEBP';
-        return null;
-    }
-
-    $dir = ROOT_PATH . '/' . QL_UPLOAD_SUBDIR;
-
-    if (!is_dir($dir) && !mkdir($dir, 0755, true)) {
-        $errors['image'] = 'Không tạo được thư mục lưu ảnh';
-        return null;
-    }
-
-    $name = 'sk_' . bin2hex(random_bytes(8)) . '.' . $ext;
-
-    if (!move_uploaded_file($f['tmp_name'], $dir . $name)) {
-        $errors['image'] = 'Không lưu được ảnh';
-        return null;
-    }
-
-    return $name;
-}
-
-// Chỉ xóa file do chính hệ thống tạo ra
-function ql_delete_image(?string $name): void {
-    if ($name && preg_match('/^sk_[a-f0-9]{16}\.(jpg|png|webp)$/', $name)) {
-        $p = ROOT_PATH . '/' . QL_UPLOAD_SUBDIR . $name;
-
-        if (is_file($p)) {
-            @unlink($p);
-        }
-    }
-}
-
-/* ---------- Giá trị mặc định cho view ---------- */
-$events = $shown = $cats = [];
-
-$stats = [
-    'total' => 0,
-    'upcoming' => 0,
-    'past' => 0,
-    'cancelled' => 0,
-    'registered' => 0
-];
-
-$q = $cat = '';
-$tt = 'all';
-$tg = 'all';
-$page = $pages = 1;
-$total = 0;
-$dbError = false;
-
-/* ---------- Kiểm tra quyền ---------- */
-
-// Admin hoặc organizer được vào trang quản lý
-$forbidden = !(isLoggedIn() && (ql_is_admin() || ql_is_organizer()));
-
-if ($forbidden) {
-    if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-        ql_json(
-            403,
-            [
-                'ok' => false,
-                'message' => isLoggedIn()
-                    ? 'Bạn không có quyền đăng và quản lý sự kiện.'
-                    : 'Bạn cần đăng nhập để thực hiện thao tác này.'
-            ]
+    public static function query(array $override = []): string
+    {
+        $query = array_filter(
+            array_merge($_GET, $override),
+            fn($v) => $v !== '' && $v !== null
         );
-    }
-
-    http_response_code(isLoggedIn() ? 403 : 401);
-
-    return;
-}
-
-$uid = (int)currentUser()['id'];
-$pdo = getDB();
-
-// "Sự kiện của tôi" = sự kiện có yêu cầu THÊM của tôi đã được admin duyệt (không cần sửa bảng sukien)
-$own = "EXISTS (SELECT 1 FROM yeucau_sukien y WHERE y.ID_SuKien = s.ID AND y.ID_NguoiGui = :uid
-                  AND y.LoaiYeuCau = 'them' AND y.TrangThai = 'da_duyet')";
-
-/* =====================================================
-   POST: gửi yêu cầu thêm / sửa / xóa, rút yêu cầu (AJAX -> JSON)
-   ===================================================== */
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-
-    if (!hash_equals(
-        $_SESSION['csrf_token'] ?? '',
-        $_POST['csrf_token'] ?? ''
-    )) {
-        ql_json(
-            403,
-            [
-                'ok' => false,
-                'message' => 'Phiên làm việc đã hết hạn. Hãy tải lại trang và thử lại.'
-            ]
-        );
-    }
-
-    $action = $_POST['action'] ?? '';
-    $id     = (int)($_POST['id'] ?? 0);
-
-    try {
-
-        /* ---------- Thêm / sửa ---------- */
-        if ($action === 'save') {
-
-            $errors = [];
-
-            $title = trim($_POST['title'] ?? '');
-
-            if ($title === '' || mb_strlen($title) > 255) {
-                $errors['title'] = 'Tên sự kiện không được trống và tối đa 255 ký tự';
-            }
-
-            $catId = (int)($_POST['category_id'] ?? 0);
-
-            $st = $pdo->prepare('SELECT COUNT(*) FROM danhmuc WHERE ID = ?');
-            $st->execute([$catId]);
-
-            if (!$catId || (int)$st->fetchColumn() === 0) {
-                $errors['category_id'] = 'Hãy chọn danh mục hợp lệ';
-            }
-
-            $start = ql_parse_dt($_POST['start'] ?? '');
-            $end   = ql_parse_dt($_POST['end'] ?? '');
-
-            if (!$start) {
-                $errors['start'] = 'Thời gian bắt đầu không hợp lệ';
-            }
-
-            if (!$end) {
-                $errors['end'] = 'Thời gian kết thúc không hợp lệ';
-            }
-
-            if ($start && $end && $end < $start) {
-                $errors['end'] = 'Thời gian kết thúc phải sau thời gian bắt đầu';
-            }
-
-            $location = trim($_POST['location'] ?? '');
-
-            if ($location === '' || mb_strlen($location) > 255) {
-                $errors['location'] = 'Địa điểm không được trống và tối đa 255 ký tự';
-            }
-
-            $capacity = filter_var(
-                $_POST['capacity'] ?? null,
-                FILTER_VALIDATE_INT
-            );
-
-            if ($capacity === false || $capacity < 1) {
-                $errors['capacity'] = 'Số lượng tối đa phải là số nguyên lớn hơn 0';
-            }
-
-            $desc = trim($_POST['desc'] ?? '');
-
-            if ($errors) {
-                ql_json(
-                    422,
-                    [
-                        'ok' => false,
-                        'message' => 'Dữ liệu chưa hợp lệ',
-                        'errors' => $errors
-                    ]
-                );
-            }
-
-            $newImage = ql_save_image('image', $errors);
-
-            if ($errors) {
-                ql_json(
-                    422,
-                    [
-                        'ok' => false,
-                        'message' => 'Dữ liệu chưa hợp lệ',
-                        'errors' => $errors
-                    ]
-                );
-            }
-
-            try {
-
-                $pdo->beginTransaction();
-
-                /* ----- Thêm mới ----- */
-                if ($id === 0) {
-
-                    $pdo->prepare(
-                        'INSERT INTO sukien
-                        (
-                            TenSuKien,
-                            ID_DanhMuc,
-                            ID_NguoiTao,
-                            ThoiGianBatDau,
-                            ThoiGianKetThuc,
-                            DiaDiem,
-                            MoTa,
-                            AnhSuKien,
-                            SoLuongToiDa,
-                            TrangThai
-                        )
-                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
-                    )->execute([
-                        $title,
-                        $catId,
-                        $_SESSION['user_id'],
-                        $start,
-                        $end,
-                        $location,
-                        $desc,
-                        $newImage,
-                        $capacity,
-                        QL_STATUS_OPEN
-                    ]);
-
-                    $pdo->commit();
-
-                    ql_json(
-                        201,
-                        [
-                            'ok' => true,
-                            'message' => 'Đã thêm sự kiện "' . $title . '".'
-                        ]
-                    );
-                }
-
-                /* ----- Sửa ----- */
-
-                // Admin được sửa tất cả sự kiện
-                if (ql_is_admin()) {
-
-                    $st = $pdo->prepare(
-                        'SELECT AnhSuKien
-                         FROM sukien
-                         WHERE ID = ?
-                         FOR UPDATE'
-                    );
-
-                    $st->execute([$id]);
-
-                } else {
-
-                    // Organizer chỉ được sửa sự kiện do chính mình tạo
-                    $st = $pdo->prepare(
-                        'SELECT AnhSuKien
-                         FROM sukien
-                         WHERE ID = ?
-                           AND ID_NguoiTao = ?
-                         FOR UPDATE'
-                    );
-
-                    $st->execute([
-                        $id,
-                        $_SESSION['user_id']
-                    ]);
-                }
-
-                $row = $st->fetch(PDO::FETCH_ASSOC);
-
-                if (!$row) {
-
-                    $pdo->rollBack();
-
-                    ql_delete_image($newImage);
-
-                    ql_json(
-                        403,
-                        [
-                            'ok' => false,
-                            'message' => 'Bạn không có quyền sửa sự kiện này.'
-                        ]
-                    );
-                }
-
-                $st = $pdo->prepare(
-                    "SELECT COUNT(*)
-                     FROM dangkysukien
-                     WHERE ID_SuKien = ?
-                     AND TrangThai = 'da_dang_ky'"
-                );
-
-                $st->execute([$id]);
-
-                $registered = (int)$st->fetchColumn();
-
-                if ($capacity < $registered) {
-
-                    $pdo->rollBack();
-
-                    ql_delete_image($newImage);
-
-                    ql_json(
-                        422,
-                        [
-                            'ok' => false,
-                            'message' => 'Dữ liệu chưa hợp lệ',
-                            'errors' => [
-                                'capacity' =>
-                                    "Đã có $registered người đăng ký, không thể đặt thấp hơn"
-                            ]
-                        ]
-                    );
-                }
-
-                $image = $row['AnhSuKien'];
-
-                if ($newImage !== null) {
-                    $image = $newImage;
-                } elseif (($_POST['remove_image'] ?? '') === '1') {
-                    $image = null;
-                }
-
-                $pdo->prepare(
-                    'UPDATE sukien SET
-                        TenSuKien = ?,
-                        ID_DanhMuc = ?,
-                        ThoiGianBatDau = ?,
-                        ThoiGianKetThuc = ?,
-                        DiaDiem = ?,
-                        MoTa = ?,
-                        AnhSuKien = ?,
-                        SoLuongToiDa = ?
-                     WHERE ID = ?'
-                )->execute([
-                    $title,
-                    $catId,
-                    $start,
-                    $end,
-                    $location,
-                    $desc,
-                    $image,
-                    $capacity,
-                    $id
-                ]);
-
-                $pdo->commit();
-
-                if ($image !== $row['AnhSuKien']) {
-                    ql_delete_image($row['AnhSuKien']);
-                }
-
-                ql_json(
-                    200,
-                    [
-                        'ok' => true,
-                        'message' => 'Đã cập nhật sự kiện "' . $title . '".'
-                    ]
-                );
-
-            } catch (PDOException $ex) {
-
-                if ($pdo->inTransaction()) {
-                    $pdo->rollBack();
-                }
-
-                ql_delete_image($newImage);
-
-                throw $ex;
-            }
-        }
-
-        /* ---------- Xóa ---------- */
-        if ($action === 'delete') {
-
-            // Chỉ admin được xóa sự kiện
-            if (!ql_is_admin()) {
-                ql_json(
-                    403,
-                    [
-                        'ok' => false,
-                        'message' => 'Bạn không có quyền xóa sự kiện.'
-                    ]
-                );
-            }
-
-            $st = $pdo->prepare(
-                'SELECT TenSuKien, TrangThai, AnhSuKien
-                 FROM sukien
-                 WHERE ID = ?'
-            );
-
-            $st->execute([$id]);
-
-            $row = $st->fetch(PDO::FETCH_ASSOC);
-
-            if (!$row) {
-                ql_json(
-                    404,
-                    [
-                        'ok' => false,
-                        'message' => 'Không tìm thấy sự kiện.'
-                    ]
-                );
-            }
-
-            // Còn bất kỳ bản ghi đăng ký nào thì không xóa cứng
-            $st = $pdo->prepare(
-                'SELECT COUNT(*)
-                 FROM dangkysukien
-                 WHERE ID_SuKien = ?'
-            );
-
-            $st->execute([$id]);
-
-            if ((int)$st->fetchColumn() > 0) {
-
-                if ($row['TrangThai'] === QL_STATUS_CANCELLED) {
-                    ql_json(
-                        200,
-                        [
-                            'ok' => true,
-                            'message' => 'Sự kiện này đã ở trạng thái "Đã hủy".'
-                        ]
-                    );
-                }
-
-                $pdo->prepare(
-                    'UPDATE sukien
-                     SET TrangThai = ?
-                     WHERE ID = ?'
-                )->execute([
-                    QL_STATUS_CANCELLED,
-                    $id
-                ]);
-
-                ql_json(
-                    200,
-                    [
-                        'ok' => true,
-                        'message' =>
-                            'Sự kiện đã có đăng ký nên được chuyển sang trạng thái "Đã hủy".'
-                    ]
-                );
-            }
-
-            $pdo->prepare(
-                'DELETE FROM sukien WHERE ID = ?'
-            )->execute([$id]);
-
-            ql_delete_image($row['AnhSuKien']);
-
-            ql_json(
-                200,
-                [
-                    'ok' => true,
-                    'message' => 'Đã xóa sự kiện "' . $row['TenSuKien'] . '".'
-                ]
-            );
-        }
-
-        ql_json(
-            400,
-            [
-                'ok' => false,
-                'message' => 'Thao tác không hợp lệ.'
-            ]
-        );
-
-    } catch (PDOException $ex) {
-
-        error_log(
-            'qlsukien_controller.php: ' . $ex->getMessage()
-        );
-
-        ql_json(
-            500,
-            [
-                'ok' => false,
-                'message' => 'Lỗi máy chủ, hãy thử lại sau.'
-            ]
-        );
+        return '?' . http_build_query($query);
     }
 }
 
-/* =====================================================
-   GET: nạp dữ liệu hiển thị
-   ===================================================== */
-$pendingMap = [];
-try {
-
-    // Quản trị thấy TẤT CẢ sự kiện
-    $sql = "SELECT s.ID               AS id,
-                   s.TenSuKien        AS title,
-                   s.ID_DanhMuc       AS category_id,
-                   d.TenDanhMuc       AS category,
-                   s.ThoiGianBatDau   AS start_at,
-                   s.ThoiGianKetThuc  AS end_at,
-                   s.DiaDiem          AS location,
-                   s.MoTa             AS `desc`,
-                   s.AnhSuKien        AS image,
-                   s.SoLuongToiDa     AS capacity,
-                   s.TrangThai        AS db_status,
-                   (SELECT COUNT(*) FROM dangkysukien r
-                     WHERE r.ID_SuKien = s.ID
-                     AND r.TrangThai = 'da_dang_ky') AS registered
-            FROM sukien s
-            LEFT JOIN danhmuc d ON d.ID = s.ID_DanhMuc
-            ORDER BY s.ThoiGianBatDau DESC";
-
-    $events = $pdo->query($sql)->fetchAll(PDO::FETCH_ASSOC);
-
-    $cats = $pdo->query(
-        "SELECT ID AS id,
-                TenDanhMuc AS name
-         FROM danhmuc
-         WHERE TrangThai = 'hoat_dong'
-         ORDER BY TenDanhMuc"
-    )->fetchAll(PDO::FETCH_ASSOC);
-
-} catch (PDOException $ex) {
-
-    error_log(
-        'qlsukien_controller.php: ' . $ex->getMessage()
-    );
-
-    $events = [];
-    $cats = [];
-    $dbError = true;
-}
-
-$today = date('Y-m-d');
-
-foreach ($events as &$ev) {
-
-    $ev['id']          = (int)$ev['id'];
-    $ev['category_id'] = (int)$ev['category_id'];
-    $ev['capacity']    = (int)$ev['capacity'];
-    $ev['registered']  = (int)$ev['registered'];
-    $ev['desc']        = (string)$ev['desc'];
-    $ev['pending']     = $pendingMap[$ev['id']] ?? null;   // 'sua' | 'xoa' | null (view: hiện "Chờ duyệt", khóa nút sửa/xóa)
-
-    $startDate = substr(
-        (string)$ev['start_at'],
-        0,
-        10
-    );
-
-    $endDate = $ev['end_at']
-        ? substr((string)$ev['end_at'], 0, 10)
-        : $startDate;
-
-    if ($ev['db_status'] === QL_STATUS_CANCELLED) {
-        $ev['status'] = 'cancelled';
-
-    } elseif (
-        $ev['db_status'] === 'da_ket_thuc'
-        || $endDate < $today
-    ) {
-        $ev['status'] = 'past';
-
-    } elseif ($startDate <= $today) {
-        $ev['status'] = 'today';
-
-    } else {
-        $ev['status'] = 'upcoming';
+final class JsonResponse
+{
+    public static function send(int $code, array $payload): void
+    {
+        http_response_code($code);
+        header('Content-Type: application/json; charset=utf-8');
+        echo json_encode($payload, JSON_UNESCAPED_UNICODE);
+        exit;
     }
 
-    $ev['image_url'] =
-        ql_img_url($ev['image']);
-
-    $ev['start_input'] =
-        $ev['start_at']
-        ? date(
-            'Y-m-d\TH:i',
-            strtotime($ev['start_at'])
-        )
-        : '';
-
-    $ev['end_input'] =
-        $ev['end_at']
-        ? date(
-            'Y-m-d\TH:i',
-            strtotime($ev['end_at'])
-        )
-        : '';
-
-    $ev['pct'] =
-        $ev['capacity'] > 0
-        ? min(
-            100,
-            (int)round(
-                $ev['registered']
-                / $ev['capacity']
-                * 100
-            )
-        )
-        : 0;
-
-    // Dữ liệu đưa sang JS để đổ vào form sửa
-    $ev['json'] = [
-        'id'          => $ev['id'],
-        'title'       => $ev['title'],
-        'category_id' => $ev['category_id'],
-        'start'       => $ev['start_input'],
-        'end'         => $ev['end_input'],
-        'location'    => $ev['location'],
-        'desc'        => $ev['desc'],
-        'capacity'    => $ev['capacity'],
-        'registered'  => $ev['registered'],
-        'image_url'   => $ev['image_url'],
-    ];
-
-    $stats['total']++;
-
-    if (
-        $ev['status'] === 'upcoming'
-        || $ev['status'] === 'today'
-    ) {
-        $stats['upcoming']++;
+    public static function fail(int $code, string $message): void
+    {
+        self::send($code, ['ok' => false, 'message' => $message]);
     }
 
-    if ($ev['status'] === 'past') {
-        $stats['past']++;
+    public static function success(int $code, string $message): void
+    {
+        self::send($code, ['ok' => true, 'message' => $message]);
     }
 
-    if ($ev['status'] === 'cancelled') {
-        $stats['cancelled']++;
-    }
-
-    if ($ev['status'] !== 'cancelled') {
-        $stats['registered'] += $ev['registered'];
+    public static function invalid(array $errors): void
+    {
+        self::send(422, ['ok' => false, 'message' => 'Dữ liệu chưa hợp lệ', 'errors' => $errors]);
     }
 }
 
-unset($ev);
+final class RoleChecker
+{
+    public function isAdmin(): bool
+    {
+        return isAdmin() && $this->hasActiveRole('admin');
+    }
 
-/* ---------- Lọc, tìm kiếm, phân trang ---------- */
+    public function isOrganizer(): bool
+    {
+        return isLoggedIn() && $this->hasActiveRole('organizer');
+    }
 
-$q = trim($_GET['q'] ?? '');
+    private function hasActiveRole(string $role): bool
+    {
+        try {
+            $st = getDB()->prepare('SELECT VaiTro, TrangThai FROM nguoidung WHERE ID = ?');
+            $st->execute([$_SESSION['user_id']]);
+            $user = $st->fetch(PDO::FETCH_ASSOC);
 
-$cat = (string)(int)($_GET['loai'] ?? 0);
-
-if ($cat === '0') {
-    $cat = '';
-}
-
-$tt = in_array(
-    $_GET['tt'] ?? '',
-    [
-        'all',
-        'upcoming',
-        'today',
-        'past',
-        'cancelled'
-    ],
-    true
-)
-    ? $_GET['tt']
-    : 'all';
-
-$tg = in_array(
-    $_GET['tg'] ?? '',
-    [
-        'all',
-        'today',
-        'week',
-        'month'
-    ],
-    true
-)
-    ? $_GET['tg']
-    : 'all';
-
-$list = array_values(
-    array_filter(
-        $events,
-        function ($ev) use ($q, $cat, $tt, $tg, $today) {
-
-            if (
-                $tt === 'upcoming'
-                && $ev['status'] !== 'upcoming'
-            ) {
-                return false;
-            }
-
-            if (
-                $tt === 'today'
-                && $ev['status'] !== 'today'
-            ) {
-                return false;
-            }
-
-            if (
-                $tt === 'past'
-                && $ev['status'] !== 'past'
-            ) {
-                return false;
-            }
-
-            if (
-                $tt === 'cancelled'
-                && $ev['status'] !== 'cancelled'
-            ) {
-                return false;
-            }
-
-            $d = substr(
-                (string)$ev['start_at'],
-                0,
-                10
-            );
-
-            if (
-                $tg === 'today'
-                && $d !== $today
-            ) {
-                return false;
-            }
-
-            if (
-                $tg === 'week'
-                && (
-                    $d < $today
-                    || $d > date(
-                        'Y-m-d',
-                        strtotime('+7 days')
-                    )
-                )
-            ) {
-                return false;
-            }
-
-            if (
-                $tg === 'month'
-                && substr($d, 0, 7)
-                !== substr($today, 0, 7)
-            ) {
-                return false;
-            }
-
-            if (
-                $cat !== ''
-                && (string)$ev['category_id'] !== $cat
-            ) {
-                return false;
-            }
-
-            if (
-                $q !== ''
-                && mb_stripos(
-                    $ev['title'] . ' ' . $ev['location'],
-                    $q
-                ) === false
-            ) {
+            if (!$user || $user['VaiTro'] !== $role || $user['TrangThai'] !== 'hoat_dong') {
+                $_SESSION['user_role'] = $user['VaiTro'] ?? 'user';
                 return false;
             }
 
             return true;
+        } catch (Throwable $ex) {
+            error_log('RoleChecker::' . $role . ': ' . $ex->getMessage());
+            return false;
         }
-    )
-);
+    }
+}
 
-$total = count($list);
+final class EventImageStorage
+{
+    private const MAX_SIZE   = 2 * 1024 * 1024;
+    private const SUBDIR     = 'assets/uploads/sukien/';
+    private const EXTENSIONS = ['image/jpeg' => 'jpg', 'image/png' => 'png', 'image/webp' => 'webp'];
 
-$pages = max(
-    1,
-    (int)ceil($total / QL_PER_PAGE)
-);
+    public static function url(?string $img): string
+    {
+        if (!$img) {
+            return '';
+        }
+        if (preg_match('#^(https?:)?//#', $img)) {
+            return $img;
+        }
+        return QlUrl::base() . '/' . (strpos($img, '/') !== false ? ltrim($img, '/') : self::SUBDIR . $img);
+    }
 
-$page = min(
-    max(
-        1,
-        (int)($_GET['trang'] ?? 1)
-    ),
-    $pages
-);
+    public function save(string $field, array &$errors): ?string
+    {
+        if (empty($_FILES[$field]) || $_FILES[$field]['error'] === UPLOAD_ERR_NO_FILE) {
+            return null;
+        }
 
-$shown = array_slice(
-    $list,
-    ($page - 1) * QL_PER_PAGE,
-    QL_PER_PAGE
-);
+        $file = $_FILES[$field];
+
+        if ($file['error'] !== UPLOAD_ERR_OK) {
+            return $this->reject($errors, 'Tải ảnh lên thất bại, hãy thử lại');
+        }
+
+        if ($file['size'] > self::MAX_SIZE) {
+            return $this->reject($errors, 'Ảnh tối đa 2MB');
+        }
+
+        $mime = (new finfo(FILEINFO_MIME_TYPE))->file($file['tmp_name']);
+        $ext  = self::EXTENSIONS[$mime] ?? null;
+
+        if (!$ext) {
+            return $this->reject($errors, 'Chỉ chấp nhận ảnh JPG, PNG hoặc WEBP');
+        }
+
+        $dir = ROOT_PATH . '/' . self::SUBDIR;
+
+        if (!is_dir($dir) && !mkdir($dir, 0755, true)) {
+            return $this->reject($errors, 'Không tạo được thư mục lưu ảnh');
+        }
+
+        $name = 'sk_' . bin2hex(random_bytes(8)) . '.' . $ext;
+
+        if (!move_uploaded_file($file['tmp_name'], $dir . $name)) {
+            return $this->reject($errors, 'Không lưu được ảnh');
+        }
+
+        return $name;
+    }
+
+    public function delete(?string $name): void
+    {
+        if (!$name || !preg_match('/^sk_[a-f0-9]{16}\.(jpg|png|webp)$/', $name)) {
+            return;
+        }
+
+        $path = ROOT_PATH . '/' . self::SUBDIR . $name;
+
+        if (is_file($path)) {
+            @unlink($path);
+        }
+    }
+
+    private function reject(array &$errors, string $message): ?string
+    {
+        $errors['image'] = $message;
+        return null;
+    }
+}
+
+final class EventInput
+{
+    public string $title;
+    public int $categoryId;
+    public ?string $start;
+    public ?string $end;
+    public string $location;
+    public $capacity;
+    public string $desc;
+    public array $errors = [];
+
+    public static function fromPost(array $post, PDO $pdo): self
+    {
+        $input = new self();
+        $input->title      = trim($post['title'] ?? '');
+        $input->categoryId = (int)($post['category_id'] ?? 0);
+        $input->start      = self::parseDateTime($post['start'] ?? '');
+        $input->end        = self::parseDateTime($post['end'] ?? '');
+        $input->location   = trim($post['location'] ?? '');
+        $input->capacity   = filter_var($post['capacity'] ?? null, FILTER_VALIDATE_INT);
+        $input->desc       = trim($post['desc'] ?? '');
+        $input->validate($pdo);
+
+        return $input;
+    }
+
+    private function validate(PDO $pdo): void
+    {
+        if ($this->title === '' || mb_strlen($this->title) > 255) {
+            $this->errors['title'] = 'Tên sự kiện không được trống và tối đa 255 ký tự';
+        }
+
+        if (!$this->categoryId || !$this->categoryExists($pdo)) {
+            $this->errors['category_id'] = 'Hãy chọn danh mục hợp lệ';
+        }
+
+        if (!$this->start) {
+            $this->errors['start'] = 'Thời gian bắt đầu không hợp lệ';
+        }
+
+        if (!$this->end) {
+            $this->errors['end'] = 'Thời gian kết thúc không hợp lệ';
+        }
+
+        if ($this->start && $this->end && $this->end < $this->start) {
+            $this->errors['end'] = 'Thời gian kết thúc phải sau thời gian bắt đầu';
+        }
+
+        if ($this->location === '' || mb_strlen($this->location) > 255) {
+            $this->errors['location'] = 'Địa điểm không được trống và tối đa 255 ký tự';
+        }
+
+        if ($this->capacity === false || $this->capacity < 1) {
+            $this->errors['capacity'] = 'Số lượng tối đa phải là số nguyên lớn hơn 0';
+        }
+    }
+
+    private function categoryExists(PDO $pdo): bool
+    {
+        $st = $pdo->prepare('SELECT COUNT(*) FROM danhmuc WHERE ID = ?');
+        $st->execute([$this->categoryId]);
+
+        return (int)$st->fetchColumn() > 0;
+    }
+
+    private static function parseDateTime(string $value): ?string
+    {
+        $value = trim(str_replace('T', ' ', $value));
+        if ($value === '') {
+            return null;
+        }
+
+        $ts = strtotime($value);
+
+        return $ts === false ? null : date('Y-m-d H:i:s', $ts);
+    }
+}
+
+final class EventRepository
+{
+    private PDO $pdo;
+
+    public function __construct(PDO $pdo)
+    {
+        $this->pdo = $pdo;
+    }
+
+    public function insert(EventInput $in, ?string $image, $creatorId, string $status): void
+    {
+        $this->pdo->prepare(
+            'INSERT INTO sukien
+                (TenSuKien, ID_DanhMuc, ID_NguoiTao, ThoiGianBatDau, ThoiGianKetThuc,
+                 DiaDiem, MoTa, AnhSuKien, SoLuongToiDa, TrangThai)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
+        )->execute([
+            $in->title, $in->categoryId, $creatorId, $in->start, $in->end,
+            $in->location, $in->desc, $image, $in->capacity, $status,
+        ]);
+    }
+
+    public function update(int $id, EventInput $in, ?string $image): void
+    {
+        $this->pdo->prepare(
+            'UPDATE sukien SET
+                TenSuKien = ?, ID_DanhMuc = ?, ThoiGianBatDau = ?, ThoiGianKetThuc = ?,
+                DiaDiem = ?, MoTa = ?, AnhSuKien = ?, SoLuongToiDa = ?
+             WHERE ID = ?'
+        )->execute([
+            $in->title, $in->categoryId, $in->start, $in->end,
+            $in->location, $in->desc, $image, $in->capacity, $id,
+        ]);
+    }
+
+    public function lockForUpdate(int $id, ?int $ownerId): ?array
+    {
+        if ($ownerId === null) {
+            $st = $this->pdo->prepare('SELECT AnhSuKien FROM sukien WHERE ID = ? FOR UPDATE');
+            $st->execute([$id]);
+        } else {
+            $st = $this->pdo->prepare('SELECT AnhSuKien FROM sukien WHERE ID = ? AND ID_NguoiTao = ? FOR UPDATE');
+            $st->execute([$id, $ownerId]);
+        }
+
+        return $st->fetch(PDO::FETCH_ASSOC) ?: null;
+    }
+
+    public function find(int $id): ?array
+    {
+        $st = $this->pdo->prepare('SELECT TenSuKien, TrangThai, AnhSuKien FROM sukien WHERE ID = ?');
+        $st->execute([$id]);
+
+        return $st->fetch(PDO::FETCH_ASSOC) ?: null;
+    }
+
+    public function countActiveRegistrations(int $id): int
+    {
+        $st = $this->pdo->prepare("SELECT COUNT(*) FROM dangkysukien WHERE ID_SuKien = ? AND TrangThai = 'da_dang_ky'");
+        $st->execute([$id]);
+
+        return (int)$st->fetchColumn();
+    }
+
+    public function countAllRegistrations(int $id): int
+    {
+        $st = $this->pdo->prepare('SELECT COUNT(*) FROM dangkysukien WHERE ID_SuKien = ?');
+        $st->execute([$id]);
+
+        return (int)$st->fetchColumn();
+    }
+
+    public function setStatus(int $id, string $status): void
+    {
+        $this->pdo->prepare('UPDATE sukien SET TrangThai = ? WHERE ID = ?')->execute([$status, $id]);
+    }
+
+    public function delete(int $id): void
+    {
+        $this->pdo->prepare('DELETE FROM sukien WHERE ID = ?')->execute([$id]);
+    }
+
+    public function all(): array
+    {
+        $sql = "SELECT s.ID               AS id,
+                       s.TenSuKien        AS title,
+                       s.ID_DanhMuc       AS category_id,
+                       d.TenDanhMuc       AS category,
+                       s.ThoiGianBatDau   AS start_at,
+                       s.ThoiGianKetThuc  AS end_at,
+                       s.DiaDiem          AS location,
+                       s.MoTa             AS `desc`,
+                       s.AnhSuKien        AS image,
+                       s.SoLuongToiDa     AS capacity,
+                       s.TrangThai        AS db_status,
+                       (SELECT COUNT(*) FROM dangkysukien r
+                         WHERE r.ID_SuKien = s.ID
+                         AND r.TrangThai = 'da_dang_ky') AS registered
+                FROM sukien s
+                LEFT JOIN danhmuc d ON d.ID = s.ID_DanhMuc
+                ORDER BY s.ThoiGianBatDau DESC";
+
+        return $this->pdo->query($sql)->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    public function categories(): array
+    {
+        return $this->pdo->query(
+            "SELECT ID AS id, TenDanhMuc AS name
+             FROM danhmuc
+             WHERE TrangThai = 'hoat_dong'
+             ORDER BY TenDanhMuc"
+        )->fetchAll(PDO::FETCH_ASSOC);
+    }
+}
+
+final class EventListBuilder
+{
+    private const STATUS_CANCELLED = 'da_huy';
+    private const STATUS_FINISHED  = 'da_ket_thuc';
+    private const PER_PAGE         = 8;
+    private const STATUS_FILTERS   = ['all', 'upcoming', 'today', 'past', 'cancelled'];
+    private const PERIOD_FILTERS   = ['all', 'today', 'week', 'month'];
+
+    private array $events;
+    private string $today;
+
+    public function __construct(array $events)
+    {
+        $this->today  = date('Y-m-d');
+        $this->events = array_map(fn($ev) => $this->normalize($ev), $events);
+    }
+
+    public function build(): array
+    {
+        $q   = trim($_GET['q'] ?? '');
+        $cat = (string)(int)($_GET['loai'] ?? 0);
+        $cat = $cat === '0' ? '' : $cat;
+        $tt  = $this->choice($_GET['tt'] ?? '', self::STATUS_FILTERS);
+        $tg  = $this->choice($_GET['tg'] ?? '', self::PERIOD_FILTERS);
+
+        $list  = array_values(array_filter($this->events, fn($ev) => $this->matches($ev, $q, $cat, $tt, $tg)));
+        $total = count($list);
+        $pages = max(1, (int)ceil($total / self::PER_PAGE));
+        $page  = min(max(1, (int)($_GET['trang'] ?? 1)), $pages);
+
+        return [
+            'events' => $this->events,
+            'stats'  => $this->stats(),
+            'shown'  => array_slice($list, ($page - 1) * self::PER_PAGE, self::PER_PAGE),
+            'q'      => $q,
+            'cat'    => $cat,
+            'tt'     => $tt,
+            'tg'     => $tg,
+            'total'  => $total,
+            'pages'  => $pages,
+            'page'   => $page,
+        ];
+    }
+
+    private function normalize(array $ev): array
+    {
+        $ev['id']          = (int)$ev['id'];
+        $ev['category_id'] = (int)$ev['category_id'];
+        $ev['capacity']    = (int)$ev['capacity'];
+        $ev['registered']  = (int)$ev['registered'];
+        $ev['desc']        = (string)$ev['desc'];
+        $ev['pending']     = null;
+        $ev['status']      = $this->resolveStatus($ev);
+        $ev['image_url']   = EventImageStorage::url($ev['image']);
+        $ev['start_input'] = $ev['start_at'] ? date('Y-m-d\TH:i', strtotime($ev['start_at'])) : '';
+        $ev['end_input']   = $ev['end_at'] ? date('Y-m-d\TH:i', strtotime($ev['end_at'])) : '';
+        $ev['pct']         = $ev['capacity'] > 0
+            ? min(100, (int)round($ev['registered'] / $ev['capacity'] * 100))
+            : 0;
+
+        $ev['json'] = [
+            'id'          => $ev['id'],
+            'title'       => $ev['title'],
+            'category_id' => $ev['category_id'],
+            'start'       => $ev['start_input'],
+            'end'         => $ev['end_input'],
+            'location'    => $ev['location'],
+            'desc'        => $ev['desc'],
+            'capacity'    => $ev['capacity'],
+            'registered'  => $ev['registered'],
+            'image_url'   => $ev['image_url'],
+        ];
+
+        return $ev;
+    }
+
+    private function resolveStatus(array $ev): string
+    {
+        $startDate = substr((string)$ev['start_at'], 0, 10);
+        $endDate   = $ev['end_at'] ? substr((string)$ev['end_at'], 0, 10) : $startDate;
+
+        if ($ev['db_status'] === self::STATUS_CANCELLED) {
+            return 'cancelled';
+        }
+        if ($ev['db_status'] === self::STATUS_FINISHED || $endDate < $this->today) {
+            return 'past';
+        }
+        if ($startDate <= $this->today) {
+            return 'today';
+        }
+        return 'upcoming';
+    }
+
+    private function stats(): array
+    {
+        $stats = ['total' => 0, 'upcoming' => 0, 'past' => 0, 'cancelled' => 0, 'registered' => 0];
+
+        foreach ($this->events as $ev) {
+            $stats['total']++;
+
+            if ($ev['status'] === 'upcoming' || $ev['status'] === 'today') {
+                $stats['upcoming']++;
+            }
+            if ($ev['status'] === 'past') {
+                $stats['past']++;
+            }
+            if ($ev['status'] === 'cancelled') {
+                $stats['cancelled']++;
+            } else {
+                $stats['registered'] += $ev['registered'];
+            }
+        }
+
+        return $stats;
+    }
+
+    private function choice(string $value, array $allowed): string
+    {
+        return in_array($value, $allowed, true) ? $value : 'all';
+    }
+
+    private function matches(array $ev, string $q, string $cat, string $tt, string $tg): bool
+    {
+        if ($tt !== 'all' && $ev['status'] !== $tt) {
+            return false;
+        }
+        if (!$this->matchesPeriod(substr((string)$ev['start_at'], 0, 10), $tg)) {
+            return false;
+        }
+        if ($cat !== '' && (string)$ev['category_id'] !== $cat) {
+            return false;
+        }
+        if ($q !== '' && mb_stripos($ev['title'] . ' ' . $ev['location'], $q) === false) {
+            return false;
+        }
+        return true;
+    }
+
+    private function matchesPeriod(string $date, string $period): bool
+    {
+        switch ($period) {
+            case 'today':
+                return $date === $this->today;
+            case 'week':
+                return $date >= $this->today && $date <= date('Y-m-d', strtotime('+7 days'));
+            case 'month':
+                return substr($date, 0, 7) === substr($this->today, 0, 7);
+            default:
+                return true;
+        }
+    }
+}
+
+final class QlSukienController
+{
+    private const STATUS_OPEN      = 'sap_dien_ra';
+    private const STATUS_CANCELLED = 'da_huy';
+
+    private RoleChecker $roles;
+    private EventImageStorage $images;
+    private ?PDO $pdo = null;
+    private ?EventRepository $events = null;
+
+    public function __construct()
+    {
+        $this->roles  = new RoleChecker();
+        $this->images = new EventImageStorage();
+    }
+
+    public function handle(): array
+    {
+        if (!(isLoggedIn() && ($this->roles->isAdmin() || $this->roles->isOrganizer()))) {
+            return $this->denied();
+        }
+
+        $this->pdo    = getDB();
+        $this->events = new EventRepository($this->pdo);
+
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            $this->handlePost();
+        }
+
+        return $this->loadView();
+    }
+
+    private function denied(): array
+    {
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            JsonResponse::fail(
+                403,
+                isLoggedIn()
+                    ? 'Bạn không có quyền đăng và quản lý sự kiện.'
+                    : 'Bạn cần đăng nhập để thực hiện thao tác này.'
+            );
+        }
+
+        http_response_code(isLoggedIn() ? 403 : 401);
+
+        return $this->viewState(['forbidden' => true]);
+    }
+
+    private function viewState(array $override = []): array
+    {
+        return array_merge([
+            'forbidden' => false,
+            'dbError'   => false,
+            'events'    => [],
+            'cats'      => [],
+            'shown'     => [],
+            'stats'     => ['total' => 0, 'upcoming' => 0, 'past' => 0, 'cancelled' => 0, 'registered' => 0],
+            'q'         => '',
+            'cat'       => '',
+            'tt'        => 'all',
+            'tg'        => 'all',
+            'page'      => 1,
+            'pages'     => 1,
+            'total'     => 0,
+        ], $override);
+    }
+
+    private function handlePost(): void
+    {
+        if (!hash_equals($_SESSION['csrf_token'] ?? '', $_POST['csrf_token'] ?? '')) {
+            JsonResponse::fail(403, 'Phiên làm việc đã hết hạn. Hãy tải lại trang và thử lại.');
+        }
+
+        $action = $_POST['action'] ?? '';
+        $id     = (int)($_POST['id'] ?? 0);
+
+        try {
+            if ($action === 'save') {
+                $this->save($id);
+            }
+            if ($action === 'delete') {
+                $this->delete($id);
+            }
+            JsonResponse::fail(400, 'Thao tác không hợp lệ.');
+        } catch (PDOException $ex) {
+            error_log('qlsukien_controller.php: ' . $ex->getMessage());
+            JsonResponse::fail(500, 'Lỗi máy chủ, hãy thử lại sau.');
+        }
+    }
+
+    private function save(int $id): void
+    {
+        $input = EventInput::fromPost($_POST, $this->pdo);
+        if ($input->errors) {
+            JsonResponse::invalid($input->errors);
+        }
+
+        $imageErrors = [];
+        $newImage    = $this->images->save('image', $imageErrors);
+        if ($imageErrors) {
+            JsonResponse::invalid($imageErrors);
+        }
+
+        try {
+            $this->pdo->beginTransaction();
+
+            if ($id === 0) {
+                $this->create($input, $newImage);
+            }
+            $this->update($id, $input, $newImage);
+        } catch (PDOException $ex) {
+            if ($this->pdo->inTransaction()) {
+                $this->pdo->rollBack();
+            }
+            $this->images->delete($newImage);
+            throw $ex;
+        }
+    }
+
+    private function create(EventInput $input, ?string $image): void
+    {
+        $this->events->insert($input, $image, $_SESSION['user_id'], self::STATUS_OPEN);
+        $this->pdo->commit();
+
+        JsonResponse::success(201, 'Đã thêm sự kiện "' . $input->title . '".');
+    }
+
+    private function update(int $id, EventInput $input, ?string $newImage): void
+    {
+        $ownerId = $this->roles->isAdmin() ? null : (int)$_SESSION['user_id'];
+        $row     = $this->events->lockForUpdate($id, $ownerId);
+
+        if (!$row) {
+            $this->abort($newImage);
+            JsonResponse::fail(403, 'Bạn không có quyền sửa sự kiện này.');
+        }
+
+        $registered = $this->events->countActiveRegistrations($id);
+
+        if ($input->capacity < $registered) {
+            $this->abort($newImage);
+            JsonResponse::invalid(['capacity' => "Đã có $registered người đăng ký, không thể đặt thấp hơn"]);
+        }
+
+        $image = $row['AnhSuKien'];
+
+        if ($newImage !== null) {
+            $image = $newImage;
+        } elseif (($_POST['remove_image'] ?? '') === '1') {
+            $image = null;
+        }
+
+        $this->events->update($id, $input, $image);
+        $this->pdo->commit();
+
+        if ($image !== $row['AnhSuKien']) {
+            $this->images->delete($row['AnhSuKien']);
+        }
+
+        JsonResponse::success(200, 'Đã cập nhật sự kiện "' . $input->title . '".');
+    }
+
+    private function abort(?string $newImage): void
+    {
+        $this->pdo->rollBack();
+        $this->images->delete($newImage);
+    }
+
+    private function delete(int $id): void
+    {
+        if (!$this->roles->isAdmin()) {
+            JsonResponse::fail(403, 'Bạn không có quyền xóa sự kiện.');
+        }
+
+        $row = $this->events->find($id);
+
+        if (!$row) {
+            JsonResponse::fail(404, 'Không tìm thấy sự kiện.');
+        }
+
+        if ($this->events->countAllRegistrations($id) > 0) {
+            $this->cancelInsteadOfDelete($id, $row);
+        }
+
+        $this->events->delete($id);
+        $this->images->delete($row['AnhSuKien']);
+
+        JsonResponse::success(200, 'Đã xóa sự kiện "' . $row['TenSuKien'] . '".');
+    }
+
+    private function cancelInsteadOfDelete(int $id, array $row): void
+    {
+        if ($row['TrangThai'] === self::STATUS_CANCELLED) {
+            JsonResponse::success(200, 'Sự kiện này đã ở trạng thái "Đã hủy".');
+        }
+
+        $this->events->setStatus($id, self::STATUS_CANCELLED);
+
+        JsonResponse::success(200, 'Sự kiện đã có đăng ký nên được chuyển sang trạng thái "Đã hủy".');
+    }
+
+    private function loadView(): array
+    {
+        try {
+            $events = $this->events->all();
+            $cats   = $this->events->categories();
+        } catch (PDOException $ex) {
+            error_log('qlsukien_controller.php: ' . $ex->getMessage());
+            return $this->viewState(['dbError' => true]);
+        }
+
+        return $this->viewState(array_merge(
+            (new EventListBuilder($events))->build(),
+            ['cats' => $cats]
+        ));
+    }
+}
