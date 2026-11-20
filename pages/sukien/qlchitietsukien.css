@@ -177,30 +177,11 @@ tbody tr:hover {
     font-size: 14px;
 }
 
-.active {
-    background: #dff5e3;
-    color: #237a36;
-}
-
-.cancel {
-    background: #fbe0e0;
-    color: #a52a2a;
-}
-
-.payment {
-    background: #fff0cc;
-    color: #8a5a00;
-}
-
-.done {
-    background: #dff5e3;
-    color: #237a36;
-}
-
-.not {
-    background: #eee;
-    color: #666;
-}
+.status-active  { background: #dff5e3; color: #237a36; }
+.status-cancel  { background: #fbe0e0; color: #a52a2a; }
+.status-payment { background: #fff0cc; color: #8a5a00; }
+.checkin-done   { background: #dff5e3; color: #237a36; }
+.checkin-not    { background: #eee;    color: #666; }
 
 .money {
     font-weight: bold;
