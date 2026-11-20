@@ -251,3 +251,23 @@
   .ql-toasts { left: 16px; right: 16px; }
   .ql-toast { max-width: none; }
 }
+
+/* ===== Ô chọn ngày giờ: dd/mm/yyyy + giờ 00-23 + phút 00-59 ===== */
+.ql-dt { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 6px; }
+.ql-dt__datebox { position: relative; flex: 1 1 100%; min-width: 0; }
+.ql-field .ql-dt input.ql-dt__date { padding-right: 34px; }
+.ql-dt__cal {
+  position: absolute; right: 4px; top: 50%; transform: translateY(-50%);
+  width: 28px; height: 28px; border: 0; border-radius: 8px; background: transparent;
+  color: var(--ql-primary); cursor: pointer;
+}
+.ql-dt__cal:hover { background: var(--ql-soft); }
+.ql-field .ql-dt input.ql-dt__native {
+  position: absolute; left: 0; bottom: 0; width: 100%; height: 0; padding: 0; border: 0;
+  opacity: 0; pointer-events: none;
+}
+.ql-field .ql-dt select { width: auto; flex: 1 1 0; min-width: 0; padding: 10px 8px; cursor: pointer; }
+.ql-dt__sep { font-weight: 700; color: var(--ql-muted); }
+
+/* Ô "Xóa ảnh hiện tại" phải ẩn khi chưa có ảnh (thuộc tính hidden bị .ql-check ghi đè) */
+.ql-check[hidden] { display: none !important; }

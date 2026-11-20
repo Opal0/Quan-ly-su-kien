@@ -105,6 +105,86 @@
     takeFile(f);
   });
 
+  /* ---------- Ô ngày giờ: dd/mm/yyyy + giờ 00-23 + phút 00-59 ----------
+     Ô ẩn name="start"/"end" vẫn giữ dạng YYYY-MM-DDTHH:MM nên server không phải đổi. */
+  const pad2 = n => String(n).padStart(2, '0');
+  const dts = {};
+
+  function parseDMY(str) {
+    const m = /^(\d{2})\/(\d{2})\/(\d{4})$/.exec(str);
+    if (!m) return null;
+    const d = +m[1], mo = +m[2], y = +m[3];
+    const dt = new Date(y, mo - 1, d);
+    if (dt.getFullYear() !== y || dt.getMonth() !== mo - 1 || dt.getDate() !== d) return null;
+    return `${m[3]}-${m[2]}-${m[1]}`;
+  }
+
+  $$('.ql-dt').forEach(root => {
+    const name   = root.dataset.name;
+    const hidden = form.elements[name];
+    const text   = $('.ql-dt__date', root);
+    const native = $('.ql-dt__native', root);
+    const hh     = $('.ql-dt__h', root);
+    const mm     = $('.ql-dt__m', root);
+    const w      = { hidden, text, native, hh, mm, error: '' };
+    dts[name] = w;
+
+    hh.add(new Option('Giờ', ''));
+    for (let i = 0; i < 24; i++) hh.add(new Option(pad2(i), pad2(i)));
+    mm.add(new Option('Phút', ''));
+    for (let i = 0; i < 60; i++) mm.add(new Option(pad2(i), pad2(i)));
+
+    w.sync = () => {
+      const raw = text.value.trim();
+      w.error = '';
+      hidden.value = '';
+      if (!raw) return;
+      const iso = parseDMY(raw);
+      if (!iso) { w.error = 'Ngày không hợp lệ, hãy nhập theo dạng dd/mm/yyyy'; return; }
+      if (hh.value !== '' && mm.value !== '') hidden.value = `${iso}T${hh.value}:${mm.value}`;
+    };
+
+    text.addEventListener('input', () => {
+      const d = text.value.replace(/\D/g, '').slice(0, 8);
+      text.value = d.length > 4 ? `${d.slice(0, 2)}/${d.slice(2, 4)}/${d.slice(4)}`
+                 : d.length > 2 ? `${d.slice(0, 2)}/${d.slice(2)}`
+                 : d;
+      w.sync();
+    });
+    hh.addEventListener('change', w.sync);
+    mm.addEventListener('change', w.sync);
+
+    $('.ql-dt__cal', root).addEventListener('click', () => {
+      native.value = parseDMY(text.value.trim()) || '';
+      try { native.showPicker(); } catch { native.focus(); }
+    });
+    native.addEventListener('change', () => {
+      const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(native.value);
+      if (m) text.value = `${m[3]}/${m[2]}/${m[1]}`;
+      w.sync();
+    });
+  });
+
+  // Đổ giá trị "YYYY-MM-DDTHH:MM" vào ô ngày giờ ('' = xóa trắng)
+  function dtSet(name, v) {
+    const w = dts[name];
+    const m = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})/.exec(v || '');
+    w.text.value   = m ? `${m[3]}/${m[2]}/${m[1]}` : '';
+    w.native.value = m ? `${m[1]}-${m[2]}-${m[3]}` : '';
+    w.hh.value     = m ? m[4] : '';
+    w.mm.value     = m ? m[5] : '';
+    w.sync();
+  }
+
+  // Trả về thông báo lỗi, hoặc '' nếu hợp lệ
+  function checkDT(name, emptyMsg) {
+    const w = dts[name];
+    w.sync();
+    if (w.error) return w.error;
+    if (!w.hidden.value) return w.text.value.trim() ? 'Vui lòng chọn giờ và phút' : emptyMsg;
+    return '';
+  }
+
   /* ---------- Chế độ thêm / sửa ---------- */
   function setMode(ev) {
     const editing = !!ev;
@@ -115,6 +195,8 @@
   function resetForm(ev) {
     form.reset();
     clearErrors();
+    dtSet('start', '');
+    dtSet('end', '');
     $('#qlFormError').textContent = '';
     showPreview('');
     $('#fRemoveRow').hidden = true;
@@ -126,8 +208,8 @@
     if (!ev) return;
     form.elements.title.value       = ev.title;
     form.elements.category_id.value = ev.category_id || '';
-    form.elements.start.value       = ev.start;
-    form.elements.end.value         = ev.end;
+    dtSet('start', ev.start);
+    dtSet('end', ev.end);
     form.elements.location.value    = ev.location;
     form.elements.desc.value        = ev.desc;
     form.elements.capacity.value    = ev.capacity;
@@ -165,9 +247,11 @@
 
     if (!f.title.value.trim())    bad('title', 'Vui lòng nhập tên sự kiện');
     if (!f.category_id.value)     bad('category_id', 'Vui lòng chọn danh mục');
-    if (!f.start.value)           bad('start', 'Vui lòng chọn thời gian bắt đầu');
-    if (!f.end.value)             bad('end', 'Vui lòng chọn thời gian kết thúc');
-    if (f.start.value && f.end.value && f.end.value < f.start.value)
+    const sErr = checkDT('start', 'Vui lòng chọn thời gian bắt đầu');
+    const eErr = checkDT('end', 'Vui lòng chọn thời gian kết thúc');
+    if (sErr) bad('start', sErr);
+    if (eErr) bad('end', eErr);
+    if (!sErr && !eErr && f.end.value < f.start.value)
                                   bad('end', 'Thời gian kết thúc phải sau thời gian bắt đầu');
     if (!f.location.value.trim()) bad('location', 'Vui lòng nhập địa điểm');
 

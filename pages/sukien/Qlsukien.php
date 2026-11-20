@@ -27,7 +27,7 @@ $requestStatusLabel = [
     <title>Quản lý sự kiện</title>
 
     <link rel="stylesheet" href="../../assets/css/style.css">
-    <link rel="stylesheet" href="Qlsukien.css">
+    <link rel="stylesheet" href="Qlsukien.css?v=3">
     <link rel="stylesheet"
           href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css">
 </head>
@@ -112,13 +112,33 @@ $requestStatusLabel = [
 
                     <div class="ql-field ql-field--start">
                         <label for="fStart">Bắt đầu <b>*</b></label>
-                        <input id="fStart" type="datetime-local" name="start" required>
+                        <div class="ql-dt" data-name="start">
+                            <input type="hidden" name="start">
+                            <div class="ql-dt__datebox">
+                                <input id="fStart" class="ql-dt__date" type="text" inputmode="numeric" maxlength="10" placeholder="dd/mm/yyyy" autocomplete="off">
+                                <button type="button" class="ql-dt__cal" aria-label="Chọn ngày từ lịch"><i class="fa-regular fa-calendar"></i></button>
+                                <input class="ql-dt__native" type="date" tabindex="-1" aria-hidden="true">
+                            </div>
+                            <select class="ql-dt__h" aria-label="Giờ bắt đầu"></select>
+                            <span class="ql-dt__sep" aria-hidden="true">:</span>
+                            <select class="ql-dt__m" aria-label="Phút bắt đầu"></select>
+                        </div>
                         <small class="ql-err" data-for="start"></small>
                     </div>
 
                     <div class="ql-field ql-field--end">
                         <label for="fEnd">Kết thúc <b>*</b></label>
-                        <input id="fEnd" type="datetime-local" name="end" required>
+                        <div class="ql-dt" data-name="end">
+                            <input type="hidden" name="end">
+                            <div class="ql-dt__datebox">
+                                <input id="fEnd" class="ql-dt__date" type="text" inputmode="numeric" maxlength="10" placeholder="dd/mm/yyyy" autocomplete="off">
+                                <button type="button" class="ql-dt__cal" aria-label="Chọn ngày từ lịch"><i class="fa-regular fa-calendar"></i></button>
+                                <input class="ql-dt__native" type="date" tabindex="-1" aria-hidden="true">
+                            </div>
+                            <select class="ql-dt__h" aria-label="Giờ kết thúc"></select>
+                            <span class="ql-dt__sep" aria-hidden="true">:</span>
+                            <select class="ql-dt__m" aria-label="Phút kết thúc"></select>
+                        </div>
                         <small class="ql-err" data-for="end"></small>
                     </div>
 
@@ -160,7 +180,6 @@ $requestStatusLabel = [
                 </div>
 
                 <div class="ql-form__foot">
-                    <small class="ql-hint ql-hint--approve">Sự kiện chỉ hiển thị cho người dùng sau khi admin duyệt.</small>
                     <small class="ql-err ql-err--form" id="qlFormError" role="alert"></small>
                     <button type="button" class="ql-btn ql-btn--soft" id="qlReset"><i class="fa-solid fa-rotate-left"></i> Đặt lại</button>
                     <button type="submit" class="ql-btn" id="qlSave"><i class="fa-regular fa-floppy-disk"></i> <span>Gửi duyệt</span></button>
@@ -293,7 +312,7 @@ $requestStatusLabel = [
     <?php include ROOT_PATH . '/components/footer.php'; ?>
     <script src="../../assets/js/components.js"></script>
     <?php if (!$forbidden): ?>
-    <script src="Qlsukien.js"></script>
+    <script src="Qlsukien.js?v=4"></script>
     <script>
     // Rút lại yêu cầu đang chờ duyệt (token lấy từ csrfField() trong form, đúng tên field của auth.php)
     document.querySelectorAll('.js-cancel').forEach(function (btn) {
