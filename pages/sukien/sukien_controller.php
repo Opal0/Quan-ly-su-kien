@@ -6,6 +6,7 @@ class SukienController
     private const STATUS_CANCELLED = 'da_huy';
     private const STATUS_FINISHED  = 'da_ket_thuc';
     private const REG_ACTIVE       = 'da_dang_ky';
+    private const REG_CANCELLED    = 'da_huy'; // Đổi nếu bảng dangkysukien dùng giá trị khác
     private const UPLOAD_SUBDIR    = 'assets/uploads/sukien/';
     private const PER_PAGE         = 8;
     private const MONTHS           = ['', 'Th1', 'Th2', 'Th3', 'Th4', 'Th5', 'Th6', 'Th7', 'Th8', 'Th9', 'Th10', 'Th11', 'Th12'];
@@ -47,7 +48,7 @@ class SukienController
         $flash = $_SESSION['flash'] ?? null;
         unset($_SESSION['flash']);
 
-        $this->rejectPost();
+        $this->handlePost();
         $this->loadEvents();
         $this->normalizeEvents();
         $this->markRegisteredByMe();
@@ -82,14 +83,67 @@ class SukienController
         ];
     }
 
-    private function rejectPost(): void
+    private function redirectWithFlash(string $type, string $msg): void
+    {
+        $_SESSION['flash'] = ['type' => $type, 'msg' => $msg];
+        header('Location: ' . strtok($_SERVER['REQUEST_URI'], '#') . '#danh-sach');
+        exit;
+    }
+
+    private function handlePost(): void
     {
         if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
             return;
         }
-        $_SESSION['flash'] = ['type' => 'error', 'msg' => 'Hãy bấm "Chọn sự kiện / Đặt vé" để đăng ký tham gia.'];
-        header('Location: ' . strtok($_SERVER['REQUEST_URI'], '#') . '#danh-sach');
-        exit;
+
+        $action = $_POST['action'] ?? '';
+
+        if ($action !== 'cancel') {
+            $this->redirectWithFlash('error', 'Hãy bấm "Chọn sự kiện / Đặt vé" để đăng ký tham gia.');
+        }
+
+        $this->cancelRegistration();
+    }
+
+    private function cancelRegistration(): void
+    {
+        if (!hash_equals($_SESSION['csrf_token'] ?? '', (string)($_POST['csrf_token'] ?? ''))) {
+            $this->redirectWithFlash('error', 'Phiên làm việc không hợp lệ, hãy thử lại.');
+        }
+
+        if (!$this->isLoggedIn) {
+            $this->redirectWithFlash('error', 'Bạn cần đăng nhập để hủy đăng ký.');
+        }
+
+        $eventId = (int)($_POST['event_id'] ?? 0);
+        if ($eventId <= 0) {
+            $this->redirectWithFlash('error', 'Sự kiện không hợp lệ.');
+        }
+
+        try {
+            $pdo = getDB();
+
+            // Chỉ hủy được khi sự kiện chưa kết thúc
+            $st = $pdo->prepare(
+                "UPDATE dangkysukien r
+                   JOIN sukien s ON s.ID = r.ID_SuKien
+                    SET r.TrangThai = '" . self::REG_CANCELLED . "'
+                  WHERE r.ID_SuKien = ?
+                    AND r.ID_NguoiDung = ?
+                    AND r.TrangThai = '" . self::REG_ACTIVE . "'
+                    AND s.TrangThai <> '" . self::STATUS_FINISHED . "'
+                    AND DATE(COALESCE(s.ThoiGianKetThuc, s.ThoiGianBatDau)) >= CURDATE()"
+            );
+            $st->execute([$eventId, currentUser()['id']]);
+
+            if ($st->rowCount() > 0) {
+                $this->redirectWithFlash('ok', 'Đã hủy đăng ký sự kiện.');
+            }
+            $this->redirectWithFlash('error', 'Không thể hủy: đăng ký không tồn tại hoặc sự kiện đã kết thúc.');
+        } catch (Throwable $ex) {
+            error_log('SukienController (cancel): ' . $ex->getMessage());
+            $this->redirectWithFlash('error', 'Không hủy được lúc này, hãy thử lại sau.');
+        }
     }
 
     private function loadEvents(): void
