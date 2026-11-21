@@ -1,8 +1,4 @@
 <?php
-// $host = "localhost";
-// $dbname = "music4life";
-// $username = "root";
-// $password = "";
 
 try {
     $conn = new PDO(
