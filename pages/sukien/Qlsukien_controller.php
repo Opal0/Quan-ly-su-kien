@@ -288,7 +288,7 @@ final class EventRepository
 
     public function countActiveRegistrations(int $id): int
     {
-        $st = $this->pdo->prepare("SELECT COUNT(*) FROM dangkysukien WHERE ID_SuKien = ? AND TrangThai = 'da_dang_ky'");
+        $st = $this->pdo->prepare("SELECT COALESCE(SUM(SoLuong), 0) FROM dangkysukien WHERE ID_SuKien = ? AND TrangThai = 'da_dang_ky'");
         $st->execute([$id]);
 
         return (int)$st->fetchColumn();
@@ -325,7 +325,7 @@ final class EventRepository
                        s.AnhSuKien        AS image,
                        s.SoLuongToiDa     AS capacity,
                        s.TrangThai        AS db_status,
-                       (SELECT COUNT(*) FROM dangkysukien r
+                       (SELECT COALESCE(SUM(r.SoLuong), 0) FROM dangkysukien r
                          WHERE r.ID_SuKien = s.ID
                          AND r.TrangThai = 'da_dang_ky') AS registered
                 FROM sukien s
@@ -568,7 +568,8 @@ final class QlSukienController
 
     private function handlePost(): void
     {
-        if (!hash_equals($_SESSION['csrf_token'] ?? '', $_POST['csrf_token'] ?? '')) {
+        $csrfSession = (string)($_SESSION['csrf'] ?? '');
+        if ($csrfSession === '' || !hash_equals($csrfSession, (string)($_POST['csrf_token'] ?? ''))) {
             JsonResponse::fail(403, 'Phiên làm việc đã hết hạn. Hãy tải lại trang và thử lại.');
         }
 

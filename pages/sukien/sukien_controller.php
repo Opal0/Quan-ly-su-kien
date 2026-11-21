@@ -160,7 +160,7 @@ class SukienController
                            s.AnhSuKien      AS image,
                            s.SoLuongToiDa   AS capacity,
                            s.TrangThai      AS db_status,
-                           (SELECT COUNT(*) FROM dangkysukien r
+                           (SELECT COALESCE(SUM(r.SoLuong), 0) FROM dangkysukien r
                              WHERE r.ID_SuKien = s.ID AND r.TrangThai = '" . self::REG_ACTIVE . "') AS registered
                     FROM sukien s
                     LEFT JOIN danhmuc d ON d.ID = s.ID_DanhMuc
