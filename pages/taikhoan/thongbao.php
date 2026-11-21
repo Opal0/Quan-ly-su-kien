@@ -64,7 +64,7 @@ function noiDungThongBao(array $tb): array
                 <small><?= date('d/m/Y H:i', strtotime($tb['NgayTao'])) ?></small>
 
                 <?php if ($tb['LoaiThongBao'] === 'organizer_duyet' && currentRole() === 'organizer'): ?>
-                    <p><a href="<?= BASE_URL ?>/pages/sukien/quanly.php">Vào khu vực nhà tổ chức →</a></p>
+                    <p><a href="<?= BASE_URL ?>/pages/sukien/Qlsukien.php">Vào khu vực nhà tổ chức →</a></p>
                 <?php endif; ?>
 
                 <?php if ($tb['LoaiThongBao'] === 'yeucau_organizer' && isAdmin()): ?>
