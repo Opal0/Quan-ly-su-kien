@@ -6,7 +6,7 @@ class SukienController
     private const STATUS_CANCELLED = 'da_huy';
     private const STATUS_FINISHED  = 'da_ket_thuc';
     private const REG_ACTIVE       = 'da_dang_ky';
-    private const REG_CANCELLED    = 'da_huy'; // Đổi nếu bảng dangkysukien dùng giá trị khác
+    private const REG_CANCELLED    = 'da_huy'; 
     private const UPLOAD_SUBDIR    = 'assets/uploads/sukien/';
     private const PER_PAGE         = 8;
     private const MONTHS           = ['', 'Th1', 'Th2', 'Th3', 'Th4', 'Th5', 'Th6', 'Th7', 'Th8', 'Th9', 'Th10', 'Th11', 'Th12'];
